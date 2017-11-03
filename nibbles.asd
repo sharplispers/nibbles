@@ -48,18 +48,18 @@
 
 (defmethod asdf:perform ((op asdf:test-op)
                          (c (eql (asdf:find-system :nibbles))))
-  (asdf:oos 'asdf:test-op 'nibbles-tests))
+  (asdf:oos 'asdf:test-op 'nibbles/tests))
 
-(asdf:defsystem :nibbles-tests
+(asdf:defsystem :nibbles/tests
   :depends-on (:nibbles)
   :version "0.1"
   :author "Nathan Froyd <froydnj@gmail.com>"
   :maintainer "Nathan Froyd <froydnj@gmail.com>"
-  :in-order-to ((asdf:test-op (asdf:load-op :nibbles-tests)))
+  :in-order-to ((asdf:test-op (asdf:load-op :nibbles/tests)))
   :components ((:file "rt")
                (:file "tests" :depends-on ("rt"))))
 
 (defmethod asdf:perform ((op asdf:test-op)
-                         (c (eql (asdf:find-system :nibbles-tests))))
+                         (c (eql (asdf:find-system :nibbles/tests))))
   (or (funcall (intern (symbol-name :do-tests) (find-package :rtest)))
       (error "TEST-OP failed for NIBBLES-TESTS")))
