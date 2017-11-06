@@ -3,6 +3,7 @@
 (cl:in-package :nibbles)
 
 (defun read-n-bytes-into (stream n-bytes v)
+  (declare (type (integer 2 8) n-bytes))
   (dotimes (i n-bytes v)
     ;; READ-SEQUENCE would likely be more efficient here, but it does
     ;; not have the semantics we want--in particular, the blocking
@@ -12,13 +13,15 @@
 
 (declaim (inline read-byte* write-byte*))
 (defun read-byte* (stream n-bytes reffer)
-  (let ((v (make-array n-bytes :element-type '(unsigned-byte 8))))
+  (declare (type (integer 2 8) n-bytes))
+  (let ((v (make-octet-vector n-bytes)))
     (declare (dynamic-extent v))
     (read-n-bytes-into stream n-bytes v)
     (funcall reffer v 0)))
 
 (defun write-byte* (integer stream n-bytes setter)
-  (let ((v (make-array n-bytes :element-type '(unsigned-byte 8))))
+  (declare (type (integer 2 8) n-bytes))
+  (let ((v (make-octet-vector n-bytes)))
     (declare (dynamic-extent v))
     (funcall setter v 0 integer)
     (write-sequence v stream)
@@ -26,8 +29,9 @@
 
 (declaim (inline read-into-vector*))
 (defun read-into-vector* (stream vector start end n-bytes reffer)
-  (declare (type function reffer))
-  (let ((v (make-array n-bytes :element-type '(unsigned-byte 8))))
+  (declare (type (integer 2 8) n-bytes)
+           (type function reffer))
+  (let ((v (make-octet-vector n-bytes)))
     (declare (dynamic-extent v))
     (loop for i from start below end
 	  do (read-n-bytes-into stream n-bytes v)
@@ -35,9 +39,10 @@
 	  finally (return vector))))
 
 (defun read-into-list* (stream list start end n-bytes reffer)
-  (declare (type function reffer))
+  (declare (type (integer 2 8) n-bytes)
+           (type function reffer))
   (do ((end (or end (length list)))
-       (v (make-array n-bytes :element-type '(unsigned-byte 8)))
+       (v (make-octet-vector n-bytes))
        (rem (nthcdr start list) (rest rem))
        (i start (1+ i)))
       ((or (endp rem) (>= i end)) list)
@@ -70,6 +75,7 @@
 	   finally (return seq)))))
 
 (defun read-into-sequence (seq stream start end n-bytes reffer)
+  (declare (type (integer 2 8) n-bytes))
   (etypecase seq
     (list
      (read-into-list* stream seq start end n-bytes reffer))
