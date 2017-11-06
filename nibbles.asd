@@ -19,7 +19,7 @@
 (defmethod asdf:perform :around ((op asdf:load-op) (c nibbles-source-file))
   (call-next-method))
 
-(asdf:defsystem :nibbles
+(asdf:defsystem "nibbles"
   :version "0.13"
   :author "Nathan Froyd <froydnj@gmail.com>"
   :maintainer "Sharp Lispers <sharplispers@googlegroups.com>"
@@ -34,32 +34,25 @@
                (:file "macro-utils" :depends-on ("package"))
                (:file "vectors" :depends-on ("types" "macro-utils"))
                (:file "streams" :depends-on ("vectors"))
-	       (:module "doc"
-			:components
-			((:html-file "index")
-			 (:txt-file "nibbles-doc")
-			 (:css-file "style")))
+               (:module "doc"
+                        :components ((:html-file "index")
+                                     (:txt-file "nibbles-doc")
+                                     (:css-file "style")))
                (:module "sbcl-opt"
                         :depends-on ("package" "macro-utils")
                         :components ((:file "fndb")
                                      (:file "nib-tran" :depends-on ("fndb"))
                                      (:file "x86-vm" :depends-on ("fndb"))
-                                     (:file "x86-64-vm" :depends-on ("fndb"))))))
+                                     (:file "x86-64-vm" :depends-on ("fndb")))))
+  :in-order-to ((asdf:test-op (asdf:test-op "nibbles/tests"))))
 
-(defmethod asdf:perform ((op asdf:test-op)
-                         (c (eql (asdf:find-system :nibbles))))
-  (asdf:oos 'asdf:test-op 'nibbles/tests))
-
-(asdf:defsystem :nibbles/tests
-  :depends-on (:nibbles)
+(asdf:defsystem "nibbles/tests"
+  :depends-on ("nibbles")
   :version "0.1"
   :author "Nathan Froyd <froydnj@gmail.com>"
   :maintainer "Sharp Lispers <sharplispers@googlegroups.com>"
-  :in-order-to ((asdf:test-op (asdf:load-op :nibbles/tests)))
   :components ((:file "rt")
-               (:file "tests" :depends-on ("rt"))))
-
-(defmethod asdf:perform ((op asdf:test-op)
-                         (c (eql (asdf:find-system :nibbles/tests))))
-  (or (funcall (intern (symbol-name :do-tests) (find-package :rtest)))
-      (error "TEST-OP failed for NIBBLES-TESTS")))
+               (:file "tests" :depends-on ("rt")))
+  :perform (asdf:test-op (operation component)
+             (or (uiop:symbol-call '#:rtest '#:do-tests)
+                 (error "TEST-OP failed for NIBBLES-TESTS"))))
