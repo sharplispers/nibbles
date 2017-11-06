@@ -22,7 +22,7 @@
 (asdf:defsystem :nibbles
   :version "0.13"
   :author "Nathan Froyd <froydnj@gmail.com>"
-  :maintainer "Nathan Froyd <froydnj@gmail.com>"
+  :maintainer "Sharp Lispers <sharplispers@googlegroups.com>"
   :description "A library for accessing octet-addressed blocks of data in big- and little-endian orders"
   :license "BSD-style (http://opensource.org/licenses/BSD-3-Clause)"
   :default-component-class nibbles-source-file
@@ -54,7 +54,7 @@
   :depends-on (:nibbles)
   :version "0.1"
   :author "Nathan Froyd <froydnj@gmail.com>"
-  :maintainer "Nathan Froyd <froydnj@gmail.com>"
+  :maintainer "Sharp Lispers <sharplispers@googlegroups.com>"
   :in-order-to ((asdf:test-op (asdf:load-op :nibbles/tests)))
   :components ((:file "rt")
                (:file "tests" :depends-on ("rt"))))
