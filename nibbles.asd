@@ -26,7 +26,7 @@
   :description "A library for accessing octet-addressed blocks of data in big- and little-endian orders"
   :license "BSD-style (http://opensource.org/licenses/BSD-3-Clause)"
   :default-component-class nibbles-source-file
-  :components ((:static-file "README")
+  :components ((:static-file "README.md")
                (:static-file "LICENSE")
                (:static-file "NEWS")
                (:file "package")
