@@ -47,12 +47,11 @@
   :in-order-to ((asdf:test-op (asdf:test-op "nibbles/tests"))))
 
 (asdf:defsystem "nibbles/tests"
-  :depends-on ("nibbles")
+  :depends-on ("nibbles" "rt")
   :version "0.1"
   :author "Nathan Froyd <froydnj@gmail.com>"
   :maintainer "Sharp Lispers <sharplispers@googlegroups.com>"
-  :components ((:file "rt")
-               (:file "tests" :depends-on ("rt")))
+  :components ((:file "tests"))
   :perform (asdf:test-op (operation component)
              (or (uiop:symbol-call '#:rtest '#:do-tests)
                  (error "TEST-OP failed for NIBBLES-TESTS"))))
