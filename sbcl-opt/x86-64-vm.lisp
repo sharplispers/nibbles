@@ -48,6 +48,10 @@
                                      #'nibbles::byte-ref-fun-name)
                                  bitsize signedp big-endian-p))
                   (internal-name (nibbles::internalify name))
+                  (operand-size (ecase bitsize
+                                  (16 :word)
+                                  (32 :dword)
+                                  (64 :qword)))
                   (ref-mov-insn (ecase bitsize
                                   (16
                                    (if big-endian-p
@@ -60,7 +64,16 @@
                                    (64 'mov)))
                   (result-sc (if signedp 'signed-reg 'unsigned-reg))
                   (result-type (if signedp 'signed-num 'unsigned-num)))
-             (flet ((swap-tn-inst-form (tn-name)
+             (flet ((movx (insn dest source source-size)
+                      (if (and (find-package "SB-X86-64-ASM")
+                               (not (find-symbol "MOVZXD" "SB-X86-64-ASM")))
+                          ;; new assembler
+                          (if (eq insn 'mov)
+                              `(inst ,insn ,dest ,source)
+                              `(inst ,(case insn (movsxd 'movsx) (movzxd 'movzx) (t insn))
+                                     '(,source-size :qword) ,dest ,source))
+                          `(inst ,insn ,dest ,source)))
+                    (swap-tn-inst-form (tn-name)
                       (if (= bitsize 16)
                           `(inst rol ,tn-name 8)
                           `(inst bswap ,tn-name))))
@@ -84,21 +97,17 @@
                   (:generator 3
                     (let* ((base-disp (- (* vector-data-offset n-word-bytes)
                                          other-pointer-lowtag))
-                           (operand-size ,(ecase bitsize
-                                            (16 :word)
-                                            (32 :dword)
-                                            (64 :qword)))
-                           (result-in-size (reg-in-size result operand-size))
+                           (result-in-size (reg-in-size result ,operand-size))
                            ,@(when setterp
-                               '((value (reg-in-size value* operand-size))))
+                               `((value (reg-in-size value* ,operand-size))))
                            ,@(when (and setterp big-endian-p)
-                               '((temp (reg-in-size temp operand-size))))
+                               `((temp (reg-in-size temp ,operand-size))))
                            (memref (sc-case index
                                      (immediate
-                                      (make-ea operand-size :base vector
+                                      (make-ea ,operand-size :base vector
                                                             :disp (+ (tn-value index) base-disp)))
                                      (t
-                                      (make-ea operand-size
+                                      (make-ea ,operand-size
                                                :base vector :index index
                                                :disp base-disp)))))
                       (declare (ignorable result-in-size))
@@ -109,11 +118,11 @@
                            `(inst mov memref ,(if big-endian-p
                                                   'temp
                                                   'value))
-                           `(inst ,ref-mov-insn
-                                  ,(if (and big-endian-p (= bitsize 32))
+                           (movx ref-mov-insn
+                                 (if (and big-endian-p (= bitsize 32))
                                        'result-in-size
                                        'result)
-                                  memref))
+                                 'memref operand-size))
                       ,@(if setterp
                             '((move result value*))
                             (when big-endian-p
@@ -121,7 +130,8 @@
                                                         'result-in-size
                                                         'result))
                                 ,(when (and (/= bitsize 64) signedp)
-                                   `(inst movsx result result-in-size))))))))))))
+                                   (movx 'movsx 'result 'result-in-size
+                                         operand-size))))))))))))
     (loop for i from 0 upto #b10111
           for bitsize = (ecase (ldb (byte 2 3) i)
                           (0 16)
