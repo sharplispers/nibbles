@@ -211,7 +211,7 @@
   (declare (ignorable value vector index))
   #+abcl
   (progn
-    (setf (sb32ref/be vector index) (system::double-float-high-bits value)
+    (setf (ub32ref/be vector index) (system::double-float-high-bits value)
           (ub32ref/be vector (+ index 4)) (system::double-float-low-bits value))
     value)
   #+allegro
@@ -274,7 +274,7 @@
   #+abcl
   (progn
     (setf (ub32ref/le vector index) (system::double-float-low-bits value)
-          (sb32ref/le vector (+ index 4)) (system::double-float-high-bits value))
+          (ub32ref/le vector (+ index 4)) (system::double-float-high-bits value))
     value)
   #+allegro
   (multiple-value-bind (us3 us2 us1 us0) (excl:double-float-to-shorts value)
