@@ -21,9 +21,6 @@ install:
   - curl -L https://raw.githubusercontent.com/sionescu/cl-travis/master/install.sh | bash
 
 script:
-  - cl -l nibbles -l nibbles-tests
-       -e '(setf *debugger-hook*
-                 (lambda (&rest ignorable)
-                   (declare (ignore ignorable))
-                   (uiop:quit -1)))'
-       -e '(rt:do-tests)'
+  - cl -e "(print (lisp-implementation-version))(terpri)
+           (ql:quickload :nibbles/tests :verbose t)
+           (uiop:quit (if (rt:do-tests) 0 1))"
