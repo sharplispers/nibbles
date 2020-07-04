@@ -1,17 +1,24 @@
-language: common-lisp
-sudo: required
+os: linux
+dist: bionic
+language: generic
 
 env:
-  matrix:
+  jobs:
     - LISP=sbcl
     - LISP=ccl
     - LISP=clisp
+    - LISP=ecl
     - LISP=abcl
     - LISP=allegro
 
+jobs:
+  allow_failures:
+    - env: LISP=allegro
+    - env: LISP=clisp
+
 install:
   # Install cl-travis
-  - curl https://raw.githubusercontent.com/luismbo/cl-travis/master/install.sh | bash
+  - curl -L https://raw.githubusercontent.com/sionescu/cl-travis/master/install.sh | bash
 
 script:
   - cl -l nibbles -l nibbles-tests
