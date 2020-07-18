@@ -18,7 +18,7 @@ jobs:
 
 install:
   # Install cl-travis
-  - curl -L https://raw.githubusercontent.com/sionescu/cl-travis/master/install.sh | bash
+  - curl -L https://raw.githubusercontent.com/lispci/cl-travis/master/install.sh | bash
 
 script:
   - cl -e "(print (lisp-implementation-version))(terpri)
