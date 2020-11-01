@@ -199,11 +199,26 @@
   (let ((upper (sb32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
     (kernel:make-double-float upper lower))
+  #+lispworks
+  (let* ((upper (ub32ref/be vector index))
+         (lower (ub32ref/be vector (+ index 4)))
+         (v (sys:make-typed-aref-vector 8)))
+    (declare (optimize (speed 3) (float 0) (safety 0)))
+    (declare (dynamic-extent v))
+    #+little-endian
+    (progn
+      (setf (sys:typed-aref '(unsigned-byte 32) v 0) lower)
+      (setf (sys:typed-aref '(unsigned-byte 32) v 4) upper))
+    #-little-endian
+    (progn
+      (setf (sys:typed-aref '(unsigned-byte 32) v 0) upper)
+      (setf (sys:typed-aref '(unsigned-byte 32) v 4) lower))
+    (sys:typed-aref 'double-float v 0))
   #+sbcl
   (let ((upper (sb32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
     (sb-kernel:make-double-float upper lower))
-  #-(or abcl allegro ccl cmu sbcl)
+  #-(or abcl allegro ccl cmu lispworks sbcl)
   (not-supported))
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-double-set/be))
@@ -231,12 +246,26 @@
     (setf (sb32ref/be vector index) (kernel:double-float-high-bits value)
           (ub32ref/be vector (+ index 4)) (kernel:double-float-low-bits value))
     value)
+  #+lispworks
+  (let* ((v (sys:make-typed-aref-vector 8)))
+    (declare (optimize (speed 3) (float 0) (safety 0)))
+    (declare (dynamic-extent v))
+    (setf (sys:typed-aref 'double-float v 0) value)
+    #+little-endian
+    (progn
+      (setf (ub32ref/be vector index) (sys:typed-aref '(unsigned-byte 32) v 4)
+            (ub32ref/be vector (+ index 4)) (sys:typed-aref '(unsigned-byte 32) v 0)))
+    #-little-endian
+    (progn
+      (setf (ub32ref/be vector index) (sys:typed-aref '(unsigned-byte 32) v 0)
+            (ub32ref/be vector (+ index 4)) (sys:typed-aref '(unsigned-byte 32) v 4)))
+    value)
   #+sbcl
   (progn
     (setf (sb32ref/be vector index) (sb-kernel:double-float-high-bits value)
           (ub32ref/be vector (+ index 4)) (sb-kernel:double-float-low-bits value))
     value)
-  #-(or abcl allegro ccl cmu sbcl)
+  #-(or abcl allegro ccl cmu lispworks sbcl)
   (not-supported))
 (defsetf ieee-double-ref/be ieee-double-set/be)
 
@@ -261,11 +290,26 @@
   (let ((lower (ub32ref/le vector index))
         (upper (sb32ref/le vector (+ index 4))))
     (kernel:make-double-float upper lower))
+  #+lispworks
+  (let* ((lower (ub32ref/le vector index))
+         (upper (ub32ref/le vector (+ index 4)))
+         (v (sys:make-typed-aref-vector 8)))
+    (declare (optimize (speed 3) (float 0) (safety 0)))
+    (declare (dynamic-extent v))
+    #+little-endian
+    (progn
+      (setf (sys:typed-aref '(unsigned-byte 32) v 0) lower)
+      (setf (sys:typed-aref '(unsigned-byte 32) v 4) upper))
+    #-little-endian
+    (progn
+      (setf (sys:typed-aref '(unsigned-byte 32) v 0) upper)
+      (setf (sys:typed-aref '(unsigned-byte 32) v 4) lower))
+    (sys:typed-aref 'double-float v 0))
   #+sbcl
   (let ((lower (ub32ref/le vector index))
         (upper (sb32ref/le vector (+ index 4))))
     (sb-kernel:make-double-float upper lower))
-  #-(or abcl allegro ccl cmu sbcl)
+  #-(or abcl allegro ccl cmu lispworks sbcl)
   (not-supported))
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-double-set/le))
@@ -293,11 +337,25 @@
     (setf (ub32ref/le vector index) (kernel:double-float-low-bits value)
           (sb32ref/le vector (+ index 4)) (kernel:double-float-high-bits value))
     value)
+  #+lispworks
+  (let* ((v (sys:make-typed-aref-vector 8)))
+    (declare (optimize (speed 3) (float 0) (safety 0)))
+    (declare (dynamic-extent v))
+    (setf (sys:typed-aref 'double-float v 0) value)
+    #+little-endian
+    (progn
+      (setf (ub32ref/le vector index) (sys:typed-aref '(unsigned-byte 32) v 0)
+            (ub32ref/le vector (+ index 4)) (sys:typed-aref '(unsigned-byte 32) v 4)))
+    #-little-endian
+    (progn
+      (setf (ub32ref/le vector index) (sys:typed-aref '(unsigned-byte 32) v 4)
+            (ub32ref/le vector (+ index 4)) (sys:typed-aref '(unsigned-byte 32) v 0)))
+    value)
   #+sbcl
   (progn
     (setf (ub32ref/le vector index) (sb-kernel:double-float-low-bits value)
           (sb32ref/le vector (+ index 4)) (sb-kernel:double-float-high-bits value))
     value)
-  #-(or abcl allegro ccl cmu sbcl)
+  #-(or abcl allegro ccl cmu lispworks sbcl)
   (not-supported))
 (defsetf ieee-double-ref/le ieee-double-set/le)
