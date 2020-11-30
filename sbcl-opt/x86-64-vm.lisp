@@ -1,7 +1,19 @@
 ;;;; x86-64-vm.lisp -- VOP definitions SBCL
 
-#+sbcl
-(cl:in-package :sb-vm)
+#+(and sbcl x86-64)
+(defpackage :nibbles-vm
+  (:use :cl :sb-c :sb-assem :sb-vm)
+  (:shadow #:ea)
+  (:import-from :sb-vm
+                #:make-ea #:reg-in-size
+                #:generate-error-code #:invalid-array-index-error
+                #:positive-fixnum #:tagged-num
+                #:unsigned-num #:signed-num #:immediate
+                #:descriptor-reg #:any-reg #:unsigned-reg #:signed-reg
+                #:simple-array-unsigned-byte-8))
+
+#+(and sbcl x86-64)
+(in-package :nibbles-vm)
 
 #+(and sbcl x86-64) (progn
 
@@ -66,7 +78,8 @@
                   (result-type (if signedp 'signed-num 'unsigned-num)))
              (flet ((movx (insn dest source source-size)
                       (if (and (find-package "SB-X86-64-ASM")
-                               (not (find-symbol "MOVZXD" "SB-X86-64-ASM")))
+                               (not (find-symbol "MOVZXD" "SB-X86-64-ASM"))
+                               (not (find-symbol "MOVZXD" "SB-VM")))
                           ;; new assembler
                           (if (eq insn 'mov)
                               `(inst ,insn ,dest ,source)
