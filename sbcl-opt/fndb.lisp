@@ -1,13 +1,11 @@
 ;;;; fndb.lisp -- DEFKNOWNish bits for SBCL
 
-(cl:in-package :nibbles)
+(cl:in-package #:nibbles)
 
-#+sbcl (progn
-
-;;; Efficient array bounds checking
+ ;;; Efficient array bounds checking
 (sb-c:defknown %check-bound
-  ((simple-array (unsigned-byte 8) (*)) index (and fixnum sb-vm:word)
-   (member 2 4 8 16))
+    ((simple-array (unsigned-byte 8) (*)) index (and fixnum sb-vm:word)
+     (member 2 4 8 16))
     index (sb-c:any) :overwrite-fndb-silently t)
 
 ;; We DEFKNOWN the exported functions so we can DEFTRANSFORM them.
@@ -41,5 +39,3 @@
                      ,internal-arg-types
                      ,arg-type (sb-c:any) :overwrite-fndb-silently t) into defknowns
         finally (return `(progn ,@defknowns)))
-
-);#+sbcl

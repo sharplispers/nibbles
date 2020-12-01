@@ -1,9 +1,6 @@
 ;;;; x86-vm.lisp -- VOP definitions for SBCL
 
-#+sbcl
-(cl:in-package :sb-vm)
-
-#+(and sbcl x86) (progn
+(cl:in-package #:sb-vm)
 
 (define-vop (%check-bound)
   (:translate nibbles::%check-bound)
@@ -62,10 +59,10 @@
                                 `(,result-type)))
                 ,@(when (or setterp big-endian-p)
                     `((:temporary (:sc unsigned-reg :offset eax-offset
-                                       :from ,(if setterp
-						  '(:load 0)
-						  '(:argument 2))
-                                       :to (:result 0)) eax)))
+                                   :from ,(if setterp
+                                              '(:load 0)
+                                              '(:argument 2))
+                                   :to (:result 0)) eax)))
                 (:results (result :scs (,result-sc)))
                 (:result-types ,result-type)
                 (:generator 3
@@ -74,11 +71,11 @@
                          (memref (sc-case index
                                    (immediate
                                     (make-ea :word :base vector
-                                             :disp (+ (tn-value index) base-disp)))
+                                                   :disp (+ (tn-value index) base-disp)))
                                    (t
                                     (make-ea :word :base vector
-                                             :index index
-                                             :disp base-disp)))))
+                                                   :index index
+                                                   :disp base-disp)))))
                     ,(when setterp
                        '(move eax value))
                     ,(when (and setterp big-endian-p)
@@ -129,8 +126,8 @@
                                 `(,result-type)))
                 ,@(when (and setterp big-endian-p)
                     `((:temporary (:sc unsigned-reg
-                                       :from (:load 0)
-                                       :to (:result 0)) temp)))
+                                   :from (:load 0)
+                                   :to (:result 0)) temp)))
                 (:results (result :scs (,result-sc)))
                 (:result-types ,result-type)
                 (:generator 3
@@ -139,10 +136,10 @@
                          (memref (sc-case index
                                    (immediate
                                     (make-ea :dword :base vector
-                                             :disp (+ (tn-value index) base-disp)))
+                                                    :disp (+ (tn-value index) base-disp)))
                                    (t
                                     (make-ea :dword :base vector :index index
-                                             :disp base-disp)))))
+                                                    :disp base-disp)))))
                     ,@(when (and setterp big-endian-p)
                         `((inst mov temp value)
                           (inst bswap temp)))
@@ -161,5 +158,3 @@
           for big-endian-p = (logbitp 0 i)
           collect (frob setterp signedp big-endian-p) into forms
           finally (return `(progn ,@forms))))
-
-);#+(and sbcl x86)

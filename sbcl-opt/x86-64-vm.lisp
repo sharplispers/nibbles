@@ -1,9 +1,6 @@
 ;;;; x86-64-vm.lisp -- VOP definitions SBCL
 
-#+sbcl
-(cl:in-package :sb-vm)
-
-#+(and sbcl x86-64) (progn
+(cl:in-package #:sb-vm)
 
 (define-vop (%check-bound)
   (:translate nibbles::%check-bound)
@@ -61,7 +58,7 @@
                                    (if big-endian-p
                                        'mov
                                        (if signedp 'movsxd 'movzxd)))
-                                   (64 'mov)))
+                                  (64 'mov)))
                   (result-sc (if signedp 'signed-reg 'unsigned-reg))
                   (result-type (if signedp 'signed-num 'unsigned-num)))
              (flet ((movx (insn dest source source-size)
@@ -105,7 +102,7 @@
                            (memref (sc-case index
                                      (immediate
                                       (make-ea ,operand-size :base vector
-                                                            :disp (+ (tn-value index) base-disp)))
+                                                             :disp (+ (tn-value index) base-disp)))
                                      (t
                                       (make-ea ,operand-size
                                                :base vector :index index
@@ -120,8 +117,8 @@
                                                   'value))
                            (movx ref-mov-insn
                                  (if (and big-endian-p (= bitsize 32))
-                                       'result-in-size
-                                       'result)
+                                     'result-in-size
+                                     'result)
                                  'memref operand-size))
                       ,@(if setterp
                             '((move result value*))
@@ -142,5 +139,3 @@
           for big-endian-p = (logbitp 0 i)
           collect (frob bitsize setterp signedp big-endian-p) into forms
           finally (return `(progn ,@forms))))
-
-);#+(and sbcl x86-64)
