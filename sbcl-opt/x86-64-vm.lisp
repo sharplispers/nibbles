@@ -64,14 +64,10 @@
                   (result-sc (if signedp 'signed-reg 'unsigned-reg))
                   (result-type (if signedp 'signed-num 'unsigned-num)))
              (flet ((movx (insn dest source source-size)
-                      (if (and (find-package "SB-X86-64-ASM")
-                               (not (find-symbol "MOVZXD" "SB-X86-64-ASM")))
-                          ;; new assembler
-                          (if (eq insn 'mov)
-                              `(inst ,insn ,dest ,source)
-                              `(inst ,(case insn (movsxd 'movsx) (movzxd 'movzx) (t insn))
-                                     '(,source-size :qword) ,dest ,source))
-                          `(inst ,insn ,dest ,source)))
+                      (if (eq insn 'mov)
+                          `(inst ,insn ,dest ,source)
+                          `(inst ,(case insn (movsxd 'movsx) (movzxd 'movzx) (t insn))
+                                 '(,source-size :qword) ,dest ,source)))
                     (swap-tn-inst-form (tn-name)
                       (if (= bitsize 16)
                           `(inst rol ,operand-size ,tn-name 8)
@@ -96,36 +92,25 @@
                   (:generator 3
                     (let* ((base-disp (- (* vector-data-offset n-word-bytes)
                                          other-pointer-lowtag))
-                           ,@(when setterp
-                               `((value (reg-in-size value* ,operand-size))))
-                           ,@(when (and setterp big-endian-p)
-                               `((temp (reg-in-size temp ,operand-size))))
                            (memref (sc-case index
                                      (immediate
                                       (ea (+ (tn-value index) base-disp) vector))
                                      (t
                                       (ea base-disp vector index)))))
                       ,@(when (and setterp big-endian-p)
-                          `((inst mov temp value)
+                          `((inst mov temp value*)
                             ,(swap-tn-inst-form 'temp)))
                       ,(if setterp
                            `(inst mov ,operand-size memref ,(if big-endian-p
-                                                  'temp
-                                                  'value))
-                           (movx ref-mov-insn
-                                 (if (and big-endian-p (= bitsize 32))
-                                       'result
-                                       'result)
-                                 'memref operand-size))
+                                                                'temp
+                                                                'value*))
+                           (movx ref-mov-insn 'result 'memref operand-size))
                       ,@(if setterp
                             '((move result value*))
                             (when big-endian-p
-                              `(,(swap-tn-inst-form (if (/= bitsize 64)
-                                                        'result
-                                                        'result))
+                              `(,(swap-tn-inst-form 'result)
                                 ,(when (and (/= bitsize 64) signedp)
-                                   (movx 'movsx 'result 'result
-                                         operand-size))))))))))))
+                                   (movx 'movsx 'result 'result operand-size))))))))))))
     (loop for i from 0 upto #b10111
           for bitsize = (ecase (ldb (byte 2 3) i)
                           (0 16)

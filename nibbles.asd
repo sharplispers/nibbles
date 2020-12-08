@@ -44,7 +44,11 @@
                                      (:file "nib-tran" :depends-on ("fndb"))
                                      (:file "x86-vm" :depends-on ("fndb"))
                                      (:file "x86-64-vm" :depends-on ("fndb")))))
-  :in-order-to ((asdf:test-op (asdf:test-op "nibbles/tests"))))
+  :in-order-to ((asdf:test-op (asdf:test-op "nibbles/tests")))
+  :perform (asdf:prepare-op (component operation)
+             ;; nibbles uses SBCL's assembler on x86 and x86-64. The
+             ;; interface of the assembler with SBCL version 1.4.10.
+             #+(and sbcl (or x86 x86-64)) (sb-ext:assert-version->= 1 4 10)))
 
 (asdf:defsystem "nibbles/tests"
   :depends-on ("nibbles" "rt")
