@@ -36,8 +36,7 @@
       ;; If INDEX + OFFSET <_u BOUND, though, INDEX must be less than
       ;; BOUND.  We *do* need to check for 0 <= INDEX, but that has
       ;; already been assured by higher-level machinery.
-      (inst lea temp (make-ea :qword
-                              :index index :disp (fixnumize offset)))
+      (inst lea temp (ea (fixnumize offset) nil index))
       (inst cmp temp bound)
       (inst jmp :a error)
       (move result index))))
@@ -75,8 +74,8 @@
                           `(inst ,insn ,dest ,source)))
                     (swap-tn-inst-form (tn-name)
                       (if (= bitsize 16)
-                          `(inst rol ,tn-name 8)
-                          `(inst bswap ,tn-name))))
+                          `(inst rol ,operand-size ,tn-name 8)
+                          `(inst bswap ,operand-size ,tn-name))))
                `(define-vop (,name)
                   (:translate ,internal-name)
                   (:policy :fast-safe)
@@ -97,40 +96,35 @@
                   (:generator 3
                     (let* ((base-disp (- (* vector-data-offset n-word-bytes)
                                          other-pointer-lowtag))
-                           (result-in-size (reg-in-size result ,operand-size))
                            ,@(when setterp
                                `((value (reg-in-size value* ,operand-size))))
                            ,@(when (and setterp big-endian-p)
                                `((temp (reg-in-size temp ,operand-size))))
                            (memref (sc-case index
                                      (immediate
-                                      (make-ea ,operand-size :base vector
-                                                            :disp (+ (tn-value index) base-disp)))
+                                      (ea (+ (tn-value index) base-disp) vector))
                                      (t
-                                      (make-ea ,operand-size
-                                               :base vector :index index
-                                               :disp base-disp)))))
-                      (declare (ignorable result-in-size))
+                                      (ea base-disp vector index)))))
                       ,@(when (and setterp big-endian-p)
                           `((inst mov temp value)
                             ,(swap-tn-inst-form 'temp)))
                       ,(if setterp
-                           `(inst mov memref ,(if big-endian-p
+                           `(inst mov ,operand-size memref ,(if big-endian-p
                                                   'temp
                                                   'value))
                            (movx ref-mov-insn
                                  (if (and big-endian-p (= bitsize 32))
-                                       'result-in-size
+                                       'result
                                        'result)
                                  'memref operand-size))
                       ,@(if setterp
                             '((move result value*))
                             (when big-endian-p
                               `(,(swap-tn-inst-form (if (/= bitsize 64)
-                                                        'result-in-size
+                                                        'result
                                                         'result))
                                 ,(when (and (/= bitsize 64) signedp)
-                                   (movx 'movsx 'result 'result-in-size
+                                   (movx 'movsx 'result 'result
                                          operand-size))))))))))))
     (loop for i from 0 upto #b10111
           for bitsize = (ecase (ldb (byte 2 3) i)
