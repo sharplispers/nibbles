@@ -38,12 +38,13 @@
                         :components ((:html-file "index")
                                      (:txt-file "nibbles-doc")
                                      (:css-file "style")))
+               #+sbcl
                (:module "sbcl-opt"
                         :depends-on ("package" "macro-utils")
                         :components ((:file "fndb")
                                      (:file "nib-tran" :depends-on ("fndb"))
-                                     (:file "x86-vm" :depends-on ("fndb"))
-                                     (:file "x86-64-vm" :depends-on ("fndb")))))
+                                     #+x86 (:file "x86-vm" :depends-on ("fndb"))
+                                     #+x86-64 (:file "x86-64-vm" :depends-on ("fndb")))))
   :in-order-to ((asdf:test-op (asdf:test-op "nibbles/tests")))
   :perform (asdf:prepare-op (component operation)
              ;; nibbles uses SBCL's assembler on x86 and x86-64. The

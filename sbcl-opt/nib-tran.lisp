@@ -2,8 +2,6 @@
 
 (cl:in-package :nibbles)
 
-#+sbcl (progn
-
 (sb-c:deftransform %check-bound ((vector bound offset n-bytes)
 				 ((simple-array (unsigned-byte 8) (*)) index
 				  (and fixnum sb-vm:word)
@@ -93,4 +91,3 @@
             collect generic-little-transform into transforms
           finally (return `(progn ,@transforms))))
 
-);#+sbcl

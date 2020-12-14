@@ -2,8 +2,6 @@
 
 (cl:in-package :nibbles)
 
-#+sbcl (progn
-
 ;;; Efficient array bounds checking
 (sb-c:defknown %check-bound
   ((simple-array (unsigned-byte 8) (*)) index (and fixnum sb-vm:word)
@@ -42,4 +40,3 @@
                      ,arg-type (sb-c:any) :overwrite-fndb-silently t) into defknowns
         finally (return `(progn ,@defknowns)))
 
-);#+sbcl
