@@ -71,7 +71,11 @@
                     (swap-tn-inst-form (tn-name)
                       (if (= bitsize 16)
                           `(inst rol ,operand-size ,tn-name 8)
-                          `(inst bswap ,operand-size ,tn-name))))
+                          ;; The '(bswap :dword r)' notation is only
+                          ;; supported on SBCL > 1.5.9.
+                          (if (ignore-errors (sb-ext:assert-version->= 1 5 9 17) t)
+                              `(inst bswap ,operand-size ,tn-name)
+                              `(inst bswap (sb-vm::reg-in-size ,tn-name ,operand-size))))))
                `(define-vop (,name)
                   (:translate ,internal-name)
                   (:policy :fast-safe)
