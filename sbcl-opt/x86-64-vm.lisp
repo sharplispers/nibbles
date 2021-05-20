@@ -64,10 +64,18 @@
                   (result-sc (if signedp 'signed-reg 'unsigned-reg))
                   (result-type (if signedp 'signed-num 'unsigned-num)))
              (flet ((movx (insn dest source source-size)
-                      (if (eq insn 'mov)
-                          `(inst ,insn ,dest ,source)
-                          `(inst ,(case insn (movsxd 'movsx) (movzxd 'movzx) (t insn))
-                                 '(,source-size :qword) ,dest ,source)))
+                      (cond ((eq insn 'mov)
+                             `(inst ,insn ,dest ,source))
+                            ;; (movzx (:dword :qword) dest source) is
+                            ;; no longer allowed on SBCL > 2.1.4.134
+                            ;; but older versions already supported
+                            ;; this new spelling.
+                            ((and (member insn '(movzx movzxd))
+                                  (eq source-size :dword))
+                             `(inst mov :dword ,dest ,source))
+                            (t
+                             `(inst ,(case insn (movsxd 'movsx) (movzxd 'movzx) (t insn))
+                                    '(,source-size :qword) ,dest ,source))))
                     (swap-tn-inst-form (tn-name)
                       (if (= bitsize 16)
                           `(inst rol ,operand-size ,tn-name 8)
