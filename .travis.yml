@@ -9,7 +9,7 @@ env:
     - LISP=clisp
     - LISP=ecl
     - LISP=abcl
-    - LISP=allegro
+    # - LISP=allegro
 
 jobs:
   allow_failures:
