@@ -20,7 +20,7 @@
   (:vop-var vop)
   (:generator 5
     (let ((error (generate-error-code vop 'invalid-array-index-error
-                                      array bound index)))
+                                      array bound temp)))
       ;; We want to check the conditions:
       ;;
       ;; 0 <= INDEX
@@ -36,9 +36,9 @@
       ;; If INDEX + OFFSET <_u BOUND, though, INDEX must be less than
       ;; BOUND.  We *do* need to check for 0 <= INDEX, but that has
       ;; already been assured by higher-level machinery.
-      (inst lea temp (make-ea :dword :index index :disp (fixnumize offset)))
+      (inst lea temp (make-ea :dword :index index :disp (fixnumize (1- offset))))
       (inst cmp temp bound)
-      (inst jmp :a error)
+      (inst jmp :ae error)
       (move result index))))
 
 #.(flet ((frob (setterp signedp big-endian-p)
