@@ -3,7 +3,7 @@
 #+sbcl
 (cl:in-package :sb-vm)
 
-#+(and sbcl x86) (progn
+#+(and sbcl x86 #.(cl:if (cl:find-package "SB-NIBBLES") '(:or) '(:and))) (progn
 
 (define-vop (%check-bound)
   (:translate nibbles::%check-bound)
@@ -162,4 +162,4 @@
           collect (frob setterp signedp big-endian-p) into forms
           finally (return `(progn ,@forms))))
 
-);#+(and sbcl x86)
+);#+(and sbcl x86 (not (find-package "SB-NIBBLES")))

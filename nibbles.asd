@@ -25,6 +25,7 @@
   :maintainer "Sharp Lispers <sharplispers@googlegroups.com>"
   :description "A library for accessing octet-addressed blocks of data in big- and little-endian orders"
   :license "BSD-style (http://opensource.org/licenses/BSD-3-Clause)"
+  :weakly-depends-on ("sb-nibbles")
   :default-component-class nibbles-source-file
   :components ((:static-file "README.md")
                (:static-file "LICENSE")
