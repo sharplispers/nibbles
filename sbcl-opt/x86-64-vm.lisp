@@ -3,7 +3,7 @@
 #+sbcl
 (cl:in-package :sb-vm)
 
-#+(and sbcl x86-64) (progn
+#+(and sbcl x86-64 #.(cl:if (cl:find-package "SB-NIBBLES") '(:or) '(:and))) (progn
 
 (define-vop (%check-bound)
   (:translate nibbles::%check-bound)
@@ -20,7 +20,7 @@
   (:vop-var vop)
   (:generator 5
     (let ((error (generate-error-code vop 'invalid-array-index-error
-                                      array bound index)))
+                                      array bound temp)))
       ;; We want to check the conditions:
       ;;
       ;; 0 <= INDEX
@@ -36,9 +36,9 @@
       ;; If INDEX + OFFSET <_u BOUND, though, INDEX must be less than
       ;; BOUND.  We *do* need to check for 0 <= INDEX, but that has
       ;; already been assured by higher-level machinery.
-      (inst lea temp (ea (fixnumize offset) nil index))
+      (inst lea temp (ea (fixnumize (1- offset)) nil index))
       (inst cmp temp bound)
-      (inst jmp :a error)
+      (inst jmp :ae error)
       (move result index))))
 
 #.(flet ((frob (bitsize setterp signedp big-endian-p)
@@ -134,4 +134,4 @@
           collect (frob bitsize setterp signedp big-endian-p) into forms
           finally (return `(progn ,@forms))))
 
-);#+(and sbcl x86-64)
+);#+(and sbcl x86-64 (not (find-package "SB-NIBBLES")))

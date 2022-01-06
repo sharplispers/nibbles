@@ -4,6 +4,44 @@
 
 #+sbcl (progn
 
+#+#.(cl:if (cl:find-package "SB-NIBBLES") '(:and) '(:or)) (progn
+
+(macrolet ((def (name size signedp setterp be-p)
+             (let* ((result-type `(,(if signedp 'signed-byte 'unsigned-byte) ,size))
+                    (arg-types `(array index ,@(when setterp (list result-type)))))
+               `(sb-c:defknown ,name ,arg-types ,result-type (sb-c:any)
+                  :overwrite-fndb-silently t))))
+  (def ub16ref/be 16 nil nil t)
+  (def ub16ref/le 16 nil nil nil)
+  (def ub16set/be 16 nil t t)
+  (def ub16set/le 16 nil t nil)
+  (def sb16ref/be 16 t nil t)
+  (def sb16ref/le 16 t nil nil)
+  (def sb16set/be 16 t t t)
+  (def sb16set/le 16 t t nil)
+
+  (def ub32ref/be 32 nil nil t)
+  (def ub32ref/le 32 nil nil nil)
+  (def ub32set/be 32 nil t t)
+  (def ub32set/le 32 nil t nil)
+  (def sb32ref/be 32 t nil t)
+  (def sb32ref/le 32 t nil nil)
+  (def sb32set/be 32 t t t)
+  (def sb32set/le 32 t t nil)
+
+  (def ub64ref/be 64 nil nil t)
+  (def ub64ref/le 64 nil nil nil)
+  (def ub64set/be 64 nil t t)
+  (def ub64set/le 64 nil t nil)
+  (def sb64ref/be 64 t nil t)
+  (def sb64ref/le 64 t nil nil)
+  (def sb64set/be 64 t t t)
+  (def sb64set/le 64 t t nil))
+
+);#+(find-package "SB-NIBBLES")
+
+#-#.(cl:if (cl:find-package "SB-NIBBLES") '(:and) '(:or)) (progn
+
 ;;; Efficient array bounds checking
 (sb-c:defknown %check-bound
   ((simple-array (unsigned-byte 8) (*)) index (and fixnum sb-vm:word)
@@ -41,5 +79,7 @@
                      ,internal-arg-types
                      ,arg-type (sb-c:any) :overwrite-fndb-silently t) into defknowns
         finally (return `(progn ,@defknowns)))
+
+);#-(find-package "SB-NIBBLES")
 
 );#+sbcl
