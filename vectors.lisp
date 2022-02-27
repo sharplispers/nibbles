@@ -55,12 +55,57 @@
   (define-fetchers-and-storers 32)
   (define-fetchers-and-storers 64))
 
-(defun not-supported ()
-  (error "not supported"))
+#-(or abcl allegro ccl cmu lispworks sbcl)
+(defun make-single-float (bits)
+  (let ((exponent-bits (ldb (byte 8 23) bits)))
+    (when (= exponent-bits 255)
+      (error "infinities and NaNs are not supported"))
+    (let ((sign (if (zerop (ldb (byte 1 31) bits)) 1f0 -1f0))
+          (significand (logior (ldb (byte 23 0) bits) (if (zerop exponent-bits) 0 (ash 1 23))))
+          (exponent (if (zerop exponent-bits) -126 (- exponent-bits 127))))
+      (* sign (scale-float (float significand 1f0) (- exponent 23))))))
+
+#-(or abcl allegro ccl cmu lispworks sbcl)
+(defun make-double-float (high low)
+  (let ((exponent-bits (ldb (byte 11 20) high)))
+    (when (= exponent-bits 2047)
+      (error "infinities and NaNs are not supported"))
+    (let ((sign (if (zerop (ldb (byte 1 31) high)) 1d0 -1d0))
+          (significand
+            (logior low
+                    (ash (ldb (byte 20 0) high) 32)
+                    (if (zerop exponent-bits) 0 (ash 1 52))))
+          (exponent (if (zerop exponent-bits) -1022 (- exponent-bits 1023))))
+      (* sign (scale-float (float significand 1d0) (- exponent 52))))))
+
+#-(or abcl allegro ccl cmu lispworks sbcl)
+(defun single-float-bits (float)
+  (multiple-value-bind (significand exponent sign)
+      (decode-float float)
+    (let ((sign-bit (if (plusp sign) 0 1))
+          (exponent-bits (if (zerop significand) 0 (+ exponent 127 -1)))
+          (significand-bits (floor (* #.(expt 2s0 24) significand))))
+      (when (<= exponent-bits 0)
+        (setf significand-bits (ash significand-bits (1- exponent-bits)))
+        (setf exponent-bits 0))
+      (logior (ash sign-bit 31) (ash exponent-bits 23) (ldb (byte 23 0) significand-bits)))))
+
+#-(or abcl allegro ccl cmu lispworks sbcl)
+(defun double-float-bits (float)
+  (multiple-value-bind (significand exponent sign)
+      (decode-float float)
+    (let ((sign-bit (if (plusp sign) 0 1))
+          (exponent-bits (if (zerop significand) 0 (+ exponent 1023 -1)))
+          (significand-bits (floor (* #.(expt 2d0 53) significand))))
+      (when (<= exponent-bits 0)
+        (setf significand-bits (ash significand-bits (1- exponent-bits)))
+        (setf exponent-bits 0))
+      (values
+       (logior (ash sign-bit 31) (ash exponent-bits 20) (ldb (byte 20 32) significand-bits))
+       (ldb (byte 32 0) significand-bits)))))
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-single-ref/be))
 (defun ieee-single-ref/be (vector index)
-  (declare (ignorable vector index))
   #+abcl
   (system::make-single-float (sb32ref/be vector index))
   #+allegro
@@ -81,11 +126,10 @@
   #+sbcl
   (sb-kernel:make-single-float (sb32ref/be vector index))
   #-(or abcl allegro ccl cmu lispworks sbcl)
-  (not-supported))
+  (make-single-float (ub32ref/be vector index)))
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-single-sef/be))
 (defun ieee-single-set/be (vector index value)
-  (declare (ignorable value vector index))
   #+abcl
   (progn
     (setf (sb32ref/be vector index) (system:single-float-bits value))
@@ -115,12 +159,13 @@
     (setf (sb32ref/be vector index) (sb-kernel:single-float-bits value))
     value)
   #-(or abcl allegro ccl cmu lispworks sbcl)
-  (not-supported))
+  (progn
+    (setf (ub32ref/be vector index) (single-float-bits value))
+    value))
 (defsetf ieee-single-ref/be ieee-single-set/be)
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-single-ref/le))
 (defun ieee-single-ref/le (vector index)
-  (declare (ignorable vector index))
   #+abcl
   (system::make-single-float (sb32ref/le vector index))
   #+allegro
@@ -141,11 +186,11 @@
   #+sbcl
   (sb-kernel:make-single-float (sb32ref/le vector index))
   #-(or abcl allegro ccl cmu lispworks sbcl)
-  (not-supported))
+  (make-single-float (ub32ref/le vector index))
+)
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-single-set/le))
 (defun ieee-single-set/le (vector index value)
-  (declare (ignorable value vector index))
   #+abcl
   (progn
     (setf (sb32ref/le vector index) (system:single-float-bits value))
@@ -175,12 +220,13 @@
     (setf (sb32ref/le vector index) (sb-kernel:single-float-bits value))
     value)
   #-(or abcl allegro ccl cmu lispworks sbcl)
-  (not-supported))
+  (progn
+    (setf (ub32ref/le vector index) (single-float-bits value))
+    value))
 (defsetf ieee-single-ref/le ieee-single-set/le)
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-double-ref/be))
 (defun ieee-double-ref/be (vector index)
-  (declare (ignorable vector index))
   #+abcl
   (let ((upper (sb32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
@@ -219,11 +265,12 @@
         (lower (ub32ref/be vector (+ index 4))))
     (sb-kernel:make-double-float upper lower))
   #-(or abcl allegro ccl cmu lispworks sbcl)
-  (not-supported))
+  (let ((high (nibbles:ub32ref/be vector index))
+        (low (nibbles:ub32ref/be vector (+ index 4))))
+    (make-double-float high low)))
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-double-set/be))
 (defun ieee-double-set/be (vector index value)
-  (declare (ignorable value vector index))
   #+abcl
   (progn
     (setf (ub32ref/be vector index) (system::double-float-high-bits value)
@@ -237,9 +284,9 @@
           (ub16ref/be vector (+ index 6)) us0)
     value)
   #+ccl
-  (multiple-value-bind (upper lower) (ccl::double-float-bits value)
-    (setf (ub32ref/be vector index) upper
-          (ub32ref/be vector (+ index 4)) lower)
+  (multiple-value-bind (high low) (ccl::double-float-bits value)
+    (setf (ub32ref/be vector index) high
+          (ub32ref/be vector (+ index 4)) low)
     value)
   #+cmu
   (progn
@@ -266,12 +313,14 @@
           (ub32ref/be vector (+ index 4)) (sb-kernel:double-float-low-bits value))
     value)
   #-(or abcl allegro ccl cmu lispworks sbcl)
-  (not-supported))
+  (multiple-value-bind (high low) (double-float-bits value)
+    (setf (ub32ref/be vector index) high
+          (ub32ref/be vector (+ index 4)) low)
+    value))
 (defsetf ieee-double-ref/be ieee-double-set/be)
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-double-ref/le))
 (defun ieee-double-ref/le (vector index)
-  (declare (ignorable vector index))
   #+abcl
   (let ((lower (ub32ref/le vector index))
         (upper (sb32ref/le vector (+ index 4))))
@@ -310,11 +359,12 @@
         (upper (sb32ref/le vector (+ index 4))))
     (sb-kernel:make-double-float upper lower))
   #-(or abcl allegro ccl cmu lispworks sbcl)
-  (not-supported))
+  (let ((low (nibbles:ub32ref/le vector index))
+        (high (nibbles:ub32ref/le vector (+ index 4))))
+    (make-double-float high low)))
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-double-set/le))
 (defun ieee-double-set/le (vector index value)
-  (declare (ignorable value vector index))
   #+abcl
   (progn
     (setf (ub32ref/le vector index) (system::double-float-low-bits value)
@@ -328,9 +378,9 @@
           (ub16ref/le vector (+ index 6)) us3)
     value)
   #+ccl
-  (multiple-value-bind (upper lower) (ccl::double-float-bits value)
-    (setf (ub32ref/le vector index) lower
-          (ub32ref/le vector (+ index 4)) upper)
+  (multiple-value-bind (high low) (ccl::double-float-bits value)
+    (setf (ub32ref/le vector index) low
+          (ub32ref/le vector (+ index 4)) high)
     value)
   #+cmu
   (progn
@@ -357,5 +407,8 @@
           (sb32ref/le vector (+ index 4)) (sb-kernel:double-float-high-bits value))
     value)
   #-(or abcl allegro ccl cmu lispworks sbcl)
-  (not-supported))
+  (multiple-value-bind (high low) (double-float-bits value)
+    (setf (ub32ref/le vector index) low
+          (ub32ref/le vector (+ index 4)) high)
+    value))
 (defsetf ieee-double-ref/le ieee-double-set/le)
