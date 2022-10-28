@@ -20,7 +20,7 @@
   (call-next-method))
 
 (asdf:defsystem "nibbles"
-  :version "0.14"
+  :version "0.15"
   :author "Nathan Froyd <froydnj@gmail.com>"
   :maintainer "Sharp Lispers <sharplispers@googlegroups.com>"
   :description "A library for accessing octet-addressed blocks of data in big- and little-endian orders"
@@ -30,6 +30,7 @@
                (:static-file "LICENSE")
                (:static-file "NEWS")
                (:file "package")
+               ;; TODO: Add ecl when ECL version 23.9.9 or later is generally available.
                #-(or abcl allegro ccl cmu lispworks sbcl)
                (:file "float" :depends-on ("package"))
                (:file "types" :depends-on ("package"))

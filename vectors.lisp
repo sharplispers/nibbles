@@ -67,6 +67,11 @@
   (ccl::host-single-float-from-unsigned-byte-32 (ub32ref/be vector index))
   #+cmu
   (kernel:make-single-float (sb32ref/be vector index))
+  #+ecl
+  ;; TODO: Remove version check when ECL version 23.9.9 or later is generally available.
+  (if (>= ext:+ecl-version-number+ 230909)
+      (system::bits-single-float (ub32ref/be vector index))
+      (make-single-float (ub32ref/be vector index)))
   #+lispworks
   (let* ((ub (ub32ref/be vector index))
          (v (sys:make-typed-aref-vector 4)))
@@ -76,7 +81,7 @@
     (sys:typed-aref 'single-float v 0))
   #+sbcl
   (sb-kernel:make-single-float (sb32ref/be vector index))
-  #-(or abcl allegro ccl cmu lispworks sbcl)
+  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
   (make-single-float (ub32ref/be vector index)))
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-single-sef/be))
@@ -98,6 +103,14 @@
   (progn
     (setf (sb32ref/be vector index) (kernel:single-float-bits value))
     value)
+  #+ecl
+  ;; TODO: Remove version check when ECL version 23.9.9 or later is generally available.
+  (progn
+    (setf (ub32ref/be vector index)
+          (if (>= ext:+ecl-version-number+ 230909)
+              (system::single-float-bits value)
+              (single-float-bits value)))
+    value)
   #+lispworks
   (let* ((v (sys:make-typed-aref-vector 4)))
     (declare (optimize (speed 3) (float 0) (safety 0)))
@@ -109,7 +122,7 @@
   (progn
     (setf (sb32ref/be vector index) (sb-kernel:single-float-bits value))
     value)
-  #-(or abcl allegro ccl cmu lispworks sbcl)
+  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
   (progn
     (setf (ub32ref/be vector index) (single-float-bits value))
     value))
@@ -127,6 +140,11 @@
   (ccl::host-single-float-from-unsigned-byte-32 (ub32ref/le vector index))
   #+cmu
   (kernel:make-single-float (sb32ref/le vector index))
+  #+ecl
+  ;; TODO: Remove version check when ECL version 23.9.9 or later is generally available.
+  (if (>= ext:+ecl-version-number+ 230909)
+      (system::bits-single-float (ub32ref/le vector index))
+      (make-single-float (ub32ref/le vector index)))
   #+lispworks
   (let* ((ub (ub32ref/le vector index))
          (v (sys:make-typed-aref-vector 4)))
@@ -136,7 +154,7 @@
     (sys:typed-aref 'single-float v 0))
   #+sbcl
   (sb-kernel:make-single-float (sb32ref/le vector index))
-  #-(or abcl allegro ccl cmu lispworks sbcl)
+  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
   (make-single-float (ub32ref/le vector index))
 )
 
@@ -159,6 +177,14 @@
   (progn
     (setf (sb32ref/le vector index) (kernel:single-float-bits value))
     value)
+  #+ecl
+  ;; TODO: Remove version check when ECL version 23.9.9 or later is generally available.
+  (progn
+    (setf (ub32ref/le vector index)
+          (if (>= ext:+ecl-version-number+ 230909)
+              (system::single-float-bits value)
+              (single-float-bits value)))
+    value)
   #+lispworks
   (let* ((v (sys:make-typed-aref-vector 4)))
     (declare (optimize (speed 3) (float 0) (safety 0)))
@@ -170,7 +196,7 @@
   (progn
     (setf (sb32ref/le vector index) (sb-kernel:single-float-bits value))
     value)
-  #-(or abcl allegro ccl cmu lispworks sbcl)
+  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
   (progn
     (setf (ub32ref/le vector index) (single-float-bits value))
     value))
@@ -196,6 +222,13 @@
   (let ((upper (sb32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
     (kernel:make-double-float upper lower))
+  #+ecl
+  ;; TODO: Remove version check when ECL version 23.9.9 or later is generally available.
+  (let ((upper (ub32ref/be vector index))
+        (lower (ub32ref/be vector (+ index 4))))
+    (if (>= ext:+ecl-version-number+ 230909)
+        (system::bits-double-float (logior (ash upper 32) lower))
+        (make-double-float upper lower)))
   #+lispworks
   (let* ((upper (ub32ref/be vector index))
          (lower (ub32ref/be vector (+ index 4)))
@@ -215,10 +248,10 @@
   (let ((upper (sb32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
     (sb-kernel:make-double-float upper lower))
-  #-(or abcl allegro ccl cmu lispworks sbcl)
-  (let ((high (nibbles:ub32ref/be vector index))
-        (low (nibbles:ub32ref/be vector (+ index 4))))
-    (make-double-float high low)))
+  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
+  (let ((upper (ub32ref/be vector index))
+        (lower (ub32ref/be vector (+ index 4))))
+    (make-double-float upper lower)))
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-double-set/be))
 (defun ieee-double-set/be (vector index value)
@@ -235,15 +268,26 @@
           (ub16ref/be vector (+ index 6)) us0)
     value)
   #+ccl
-  (multiple-value-bind (high low) (ccl::double-float-bits value)
-    (setf (ub32ref/be vector index) high
-          (ub32ref/be vector (+ index 4)) low)
+  (multiple-value-bind (upper lower) (ccl::double-float-bits value)
+    (setf (ub32ref/be vector index) upper
+          (ub32ref/be vector (+ index 4)) lower)
     value)
   #+cmu
   (progn
     (setf (sb32ref/be vector index) (kernel:double-float-high-bits value)
           (ub32ref/be vector (+ index 4)) (kernel:double-float-low-bits value))
     value)
+  #+ecl
+  ;; TODO: Remove version check when ECL version 23.9.9 or later is generally available.
+  (if (>= ext:+ecl-version-number+ 230909)
+      (let ((bits (system::double-float-bits value)))
+        (setf (ub32ref/be vector index) (ldb (byte 32 32) bits)
+              (ub32ref/be vector (+ index 4)) (ldb (byte 32 0) bits))
+        value)
+      (multiple-value-bind (upper lower) (double-float-bits value)
+        (setf (ub32ref/be vector index) upper
+              (ub32ref/be vector (+ index 4)) lower)
+        value))
   #+lispworks
   (let* ((v (sys:make-typed-aref-vector 8)))
     (declare (optimize (speed 3) (float 0) (safety 0)))
@@ -263,10 +307,10 @@
     (setf (sb32ref/be vector index) (sb-kernel:double-float-high-bits value)
           (ub32ref/be vector (+ index 4)) (sb-kernel:double-float-low-bits value))
     value)
-  #-(or abcl allegro ccl cmu lispworks sbcl)
-  (multiple-value-bind (high low) (double-float-bits value)
-    (setf (ub32ref/be vector index) high
-          (ub32ref/be vector (+ index 4)) low)
+  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
+  (multiple-value-bind (upper lower) (double-float-bits value)
+    (setf (ub32ref/be vector index) upper
+          (ub32ref/be vector (+ index 4)) lower)
     value))
 (defsetf ieee-double-ref/be ieee-double-set/be)
 
@@ -290,6 +334,13 @@
   (let ((lower (ub32ref/le vector index))
         (upper (sb32ref/le vector (+ index 4))))
     (kernel:make-double-float upper lower))
+  #+ecl
+  ;; TODO: Remove version check when ECL version 23.9.9 or later is generally available.
+  (let ((lower (ub32ref/le vector index))
+        (upper (ub32ref/le vector (+ index 4))))
+    (if (>= ext:+ecl-version-number+ 230909)
+        (system::bits-double-float (logior (ash upper 32) lower))
+        (make-double-float upper lower)))
   #+lispworks
   (let* ((lower (ub32ref/le vector index))
          (upper (ub32ref/le vector (+ index 4)))
@@ -309,10 +360,10 @@
   (let ((lower (ub32ref/le vector index))
         (upper (sb32ref/le vector (+ index 4))))
     (sb-kernel:make-double-float upper lower))
-  #-(or abcl allegro ccl cmu lispworks sbcl)
-  (let ((low (nibbles:ub32ref/le vector index))
-        (high (nibbles:ub32ref/le vector (+ index 4))))
-    (make-double-float high low)))
+  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
+  (let ((lower (ub32ref/le vector index))
+        (upper (ub32ref/le vector (+ index 4))))
+    (make-double-float upper lower)))
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-double-set/le))
 (defun ieee-double-set/le (vector index value)
@@ -329,10 +380,21 @@
           (ub16ref/le vector (+ index 6)) us3)
     value)
   #+ccl
-  (multiple-value-bind (high low) (ccl::double-float-bits value)
-    (setf (ub32ref/le vector index) low
-          (ub32ref/le vector (+ index 4)) high)
+  (multiple-value-bind (upper lower) (ccl::double-float-bits value)
+    (setf (ub32ref/le vector index) lower
+          (ub32ref/le vector (+ index 4)) upper)
     value)
+  #+ecl
+  ;; TODO: Remove version check when ECL version 23.9.9 or later is generally available.
+  (if (>= ext:+ecl-version-number+ 230909)
+      (let ((bits (system::double-float-bits value)))
+        (setf (ub32ref/le vector index) (ldb (byte 32 0) bits)
+              (ub32ref/le vector (+ index 4)) (ldb (byte 32 32) bits))
+        value)
+      (multiple-value-bind (upper lower) (double-float-bits value)
+        (setf (ub32ref/le vector index) lower
+              (ub32ref/le vector (+ index 4)) upper)
+        value))
   #+cmu
   (progn
     (setf (ub32ref/le vector index) (kernel:double-float-low-bits value)
@@ -357,9 +419,9 @@
     (setf (ub32ref/le vector index) (sb-kernel:double-float-low-bits value)
           (sb32ref/le vector (+ index 4)) (sb-kernel:double-float-high-bits value))
     value)
-  #-(or abcl allegro ccl cmu lispworks sbcl)
-  (multiple-value-bind (high low) (double-float-bits value)
-    (setf (ub32ref/le vector index) low
-          (ub32ref/le vector (+ index 4)) high)
+  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
+  (multiple-value-bind (upper lower) (double-float-bits value)
+    (setf (ub32ref/le vector index) lower
+          (ub32ref/le vector (+ index 4)) upper)
     value))
 (defsetf ieee-double-ref/le ieee-double-set/le)
