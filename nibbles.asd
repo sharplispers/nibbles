@@ -20,7 +20,7 @@
   (call-next-method))
 
 (asdf:defsystem "nibbles"
-  :version "0.13"
+  :version "0.14"
   :author "Nathan Froyd <froydnj@gmail.com>"
   :maintainer "Sharp Lispers <sharplispers@googlegroups.com>"
   :description "A library for accessing octet-addressed blocks of data in big- and little-endian orders"
@@ -30,6 +30,8 @@
                (:static-file "LICENSE")
                (:static-file "NEWS")
                (:file "package")
+               #-(or abcl allegro ccl cmu lispworks sbcl)
+               (:file "float" :depends-on ("package"))
                (:file "types" :depends-on ("package"))
                (:file "macro-utils" :depends-on ("package"))
                (:file "vectors" :depends-on ("types" "macro-utils"))
@@ -56,7 +58,8 @@
   :version "0.1"
   :author "Nathan Froyd <froydnj@gmail.com>"
   :maintainer "Sharp Lispers <sharplispers@googlegroups.com>"
-  :components ((:file "tests"))
+  :components ((:file "float")
+               (:file "tests"))
   :perform (asdf:test-op (operation component)
              (or (uiop:symbol-call '#:rtest '#:do-tests)
                  (error "TEST-OP failed for NIBBLES-TESTS"))))

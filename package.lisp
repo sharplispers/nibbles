@@ -37,7 +37,9 @@
            #:write-sb32/le-sequence #:write-sb32/be-sequence
            #:write-ub64/le-sequence #:write-ub64/be-sequence
            #:write-sb64/le-sequence #:write-sb64/be-sequence)
-  ;; The following floating-point functions are not supported on all platforms.
+
+  ;; The following floating-point functions are not fully supported on all platforms.
+
   ;; Floating-point octet vector accessors.
   (:export #:ieee-single-ref/be #:ieee-single-ref/le
            #:ieee-double-ref/be #:ieee-double-ref/le)

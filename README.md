@@ -13,8 +13,9 @@ facilities.  Functions to read 16-, 32-, and 64-bit quantities from
 octet vectors in signed or unsigned flavors are provided; these
 functions are also `SETF`able.  Since it's sometimes desirable to
 read/write directly from streams, functions for doing so are also
-provided.  On many implementations, reading/writing IEEE singles/doubles
-(i.e. `single-float` and `double-float`) is also be supported.
+provided.  Reading/writing IEEE singles/doubles (i.e. `single-float`
+and `double-float`) is also supported, with limitations on platforms
+that do not fully implement IEEE floating point.
 
 In addition to centralizing such facilities, NIBBLES also aspires to
 become a place where compiler optimizations can be written once and used

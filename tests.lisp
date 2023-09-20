@@ -44,16 +44,14 @@
         (n-values (if rolling-p
 		      (- (length byte-vector) (1- bytesize))
 		      (truncate n-bytes-to-read bytesize)))
-        (ev (make-array n-values
-                        :element-type `(,byte-kind ,bitsize)
-			:adjustable t))
+        (expected-values (make-array n-values :element-type `(,byte-kind ,bitsize)))
         (i 0 (1+ i))
         (j 0)
         (combiner (make-byte-combiner bytesize big-endian-p)))
-      ((>= i n-bytes-to-read) ev)
+      ((>= i n-bytes-to-read) expected-values)
     (multiple-value-bind (aggregate set-p) (funcall combiner (aref byte-vector i))
       (when set-p
-        (setf (aref ev j)
+        (setf (aref expected-values j)
               (if (and signedp (logbitp (1- bitsize) aggregate))
                   (dpb aggregate (byte bitsize 0) -1)
                   aggregate))
@@ -166,7 +164,7 @@
   (ref-test 'nibbles:sb64ref/be 64 t t)
   :ok)
 
-;;; Big-endian set tests
+;;; Big-endian integer set tests
 
 (rtest:deftest :ub16set/be
   (set-test 'nibbles:ub16ref/be 16 nil t)
@@ -218,7 +216,7 @@
   (ref-test 'nibbles:sb64ref/le 64 t nil)
   :ok)
 
-;;; Little-endian set tests
+;;; Little-endian integer set tests
 
 (rtest:deftest :ub16set/le
   (set-test 'nibbles:ub16ref/le 16 nil nil)
@@ -243,6 +241,173 @@
 (rtest:deftest :sb64set/le
   (set-test 'nibbles:sb64ref/le 64 t nil)
   :ok)
+
+;;; Floating point.
+
+(defun normal-float-p (bits bitsize)
+  "Return true when BITS represents a IEEE floating point number that is
+neither an infinity nor a NaN.  Additionally, for CLISP, the number may not be
+denormalized."
+  (ecase bitsize
+    (32 (let ((exponent (ldb (byte 8 23) bits)))
+          (and (/= exponent 255) #+clisp (/= exponent 0))))
+    (64 (let ((exponent (ldb (byte 11 52) bits)))
+          (and (/= exponent 2047) #+clisp (/= exponent 0))))))
+
+(defun random-float-bits (bitsize)
+  (let ((bits (random (expt 2 bitsize))))
+    (if (normal-float-p bits bitsize)
+        bits
+        (random-float-bits bitsize))))
+
+(defun generate-random-float-vector (n-floats bitsize big-endian-p)
+  (let* ((bytesize (truncate bitsize 8))
+         (octets (* n-floats bytesize))
+         (v (nibbles:make-octet-vector octets)))
+    (loop for i from 0 below octets by bytesize do
+      (let ((bits (random-float-bits bitsize)))
+        (ecase bitsize
+          (32 (if big-endian-p
+                  (setf (nibbles:ub32ref/be v i) bits)
+                  (setf (nibbles:ub32ref/le v i) bits)))
+          (64 (if big-endian-p
+                  (setf (nibbles:ub64ref/be v i) bits)
+                  (setf (nibbles:ub64ref/le v i) bits))))))
+    v))
+
+(defun generate-reffed-floats (byte-vector n-floats bitsize big-endian-p)
+  (let ((bytesize (truncate bitsize 8))
+        (expected-values
+          (make-array n-floats :element-type (if (= bitsize 32) 'single-float 'double-float))))
+    (loop for i from 0 by bytesize
+          for j from 0 below n-floats
+          do (let ((bits
+                     (ecase bitsize
+                       (32 (if big-endian-p
+                               (nibbles:ub32ref/be byte-vector i)
+                               (nibbles:ub32ref/le byte-vector i)))
+                       (64 (if big-endian-p
+                               (nibbles:ub64ref/be byte-vector i)
+                               (nibbles:ub64ref/le byte-vector i))))))
+               (setf (aref expected-values j)
+                     (ecase bitsize
+                       (32 (nibbles::make-single-float bits))
+                       (64 (nibbles::make-double-float (ldb (byte 32 32) bits)
+                                                       (ldb (byte 32 0) bits)))))))
+    expected-values))
+
+(defvar *default-float-values* 4096)
+
+(defun generate-random-float-test (bitsize big-endian-p
+                                   &optional (n-floats *default-float-values*))
+  (let* ((random-octets (generate-random-float-vector n-floats bitsize big-endian-p))
+         (expected-vector (generate-reffed-floats random-octets n-floats bitsize big-endian-p)))
+    (values random-octets expected-vector)))
+
+(defun ref-float-test (reffer bitsize big-endian-p
+                       &optional (n-floats *default-float-values*))
+  (multiple-value-bind (byte-vector expected-vector)
+      (generate-random-float-test bitsize big-endian-p n-floats)
+    (flet ((run-test (reffer)
+             (let ((bytesize (truncate bitsize 8)))
+               (loop for i from 0 by bytesize
+                     for j from 0 below n-floats
+                     do (let ((reffed-val (funcall reffer byte-vector i))
+                              (expected-val (aref expected-vector j)))
+                          (unless (= reffed-val expected-val)
+                            (error "wanted ~D, got ~D from ~A"
+                                   expected-val reffed-val
+                                   (subseq byte-vector i (+ i bytesize)))))
+                     finally (return :ok)))))
+      (run-test reffer)
+      (when (typep byte-vector '(simple-array (unsigned-byte 8) (*)))
+        (let ((compiled (compile-quietly
+                           `(lambda (v i)
+                              (declare (type (simple-array (unsigned-byte 8) (*)) v))
+                              (declare (type (integer 0 #.(1- array-dimension-limit)) i))
+                              (declare (optimize speed (debug 0)))
+                              (,reffer v i)))))
+          (run-test compiled))))))
+
+(defun set-float-test (reffer bitsize big-endian-p
+                 &optional (n-floats *default-float-values*))
+  ;; We use GET-SETF-EXPANSION to avoid reaching too deeply into
+  ;; internals.  This bit relies on knowing that the writer-form will be
+  ;; a simple function call whose CAR is the internal setter, but I
+  ;; think that's a bit better than :: references everywhere.
+  (multiple-value-bind (vars vals store-vars writer-form reader-form)
+      (get-setf-expansion `(,reffer x i))
+    (declare (ignore vars vals store-vars reader-form))
+    (let ((setter (car writer-form)))
+      ;; Sanity check.
+      (unless (eq (symbol-package setter) (find-package :nibbles))
+        (error "need to update setter tests!"))
+      (multiple-value-bind (byte-vector expected-vector)
+          (generate-random-float-test bitsize big-endian-p n-floats)
+        (flet ((run-test (setter)
+                 (let ((bytesize (truncate bitsize 8)))
+                   (loop with fill-vec = (let ((v (copy-seq byte-vector)))
+                                           (fill v 0)
+                                           v)
+                         for i from 0 by bytesize
+                         for j from 0 below n-floats
+                         do (funcall setter fill-vec i (aref expected-vector j))
+                         finally (return
+                                   (if (mismatch fill-vec byte-vector)
+                                       (error "wanted ~A, got ~A" byte-vector fill-vec)
+                                       :ok))))))
+          (run-test setter)
+          (when (typep byte-vector '(simple-array (unsigned-byte 8) (*)))
+            (let ((compiled (compile-quietly
+                             `(lambda (v i new)
+                                (declare (type (simple-array (unsigned-byte 8) (*)) v))
+                                (declare (type (integer 0 #.(1- array-dimension-limit)) i))
+                                (declare (type ,(if (= bitsize 32) 'single-float 'double-float)
+                                               new))
+                                (declare (optimize speed (debug 0)))
+                                (,setter v i new)))))
+              (run-test compiled))))))))
+
+;;; Big-endian float ref tests
+
+(rtest:deftest :ieee-single-ref/be
+  (ref-float-test 'nibbles:ieee-single-ref/be 32 t)
+  :ok)
+
+(rtest:deftest :ieee-double-ref/be
+  (ref-float-test 'nibbles:ieee-double-ref/be 64 t)
+  :ok)
+
+;;; Big-endian float set tests
+
+(rtest:deftest :ieee-single-set/be
+  (set-float-test 'nibbles:ieee-single-ref/be 32 t)
+  :ok)
+
+(rtest:deftest :ieee-double-set/be
+  (set-float-test 'nibbles:ieee-double-ref/be 64 t)
+  :ok)
+
+;;; Little-endian float ref tests
+
+(rtest:deftest :ieee-single-ref/le
+  (ref-float-test 'nibbles:ieee-single-ref/le 32 nil)
+  :ok)
+
+(rtest:deftest :ieee-double-ref/le
+  (ref-float-test 'nibbles:ieee-double-ref/le 64 nil)
+  :ok)
+
+;;; Little-endian float set tests
+
+(rtest:deftest :ieee-single-set/le
+  (set-float-test 'nibbles:ieee-single-ref/le 32 nil)
+  :ok)
+
+(rtest:deftest :ieee-double-set/le
+  (set-float-test 'nibbles:ieee-double-ref/le 64 nil)
+  :ok)
+
 
 ;;; Stream reading tests
 
