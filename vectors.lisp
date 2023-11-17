@@ -81,9 +81,11 @@
     (declare (dynamic-extent v))
     (setf (sys:typed-aref '(unsigned-byte 32) v 0) ub)
     (sys:typed-aref 'single-float v 0))
+  #+mezzano
+  (mezzano.extensions:ieee-binary32-to-single-float (ub32ref/be vector index))
   #+sbcl
   (sb-kernel:make-single-float (sb32ref/be vector index))
-  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
   (make-single-float (ub32ref/be vector index)))
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-single-sef/be))
@@ -124,11 +126,15 @@
     (setf (sys:typed-aref 'single-float v 0) value)
     (setf (ub32ref/be vector index) (sys:typed-aref '(unsigned-byte 32) v 0))
     value)
+  #+mezzano
+  (progn
+    (setf (ub32ref/be vector index) (mezzano.extensions:single-float-to-ieee-binary32 value))
+    value)
   #+sbcl
   (progn
     (setf (sb32ref/be vector index) (sb-kernel:single-float-bits value))
     value)
-  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
   (progn
     (setf (ub32ref/be vector index) (single-float-bits value))
     value))
@@ -144,10 +150,10 @@
     (excl:shorts-to-single-float high low))
   #+ccl
   (ccl::host-single-float-from-unsigned-byte-32 (ub32ref/le vector index))
-  #+cmu
-  (kernel:make-single-float (sb32ref/le vector index))
   #+clasp
   (ext:bits-to-single-float (ub32ref/le vector index))
+  #+cmu
+  (kernel:make-single-float (sb32ref/le vector index))
   #+ecl
   ;; TODO: Remove version check when ECL version 23.9.9 or later is generally available.
   (if (>= ext:+ecl-version-number+ 230909)
@@ -160,9 +166,11 @@
     (declare (dynamic-extent v))
     (setf (sys:typed-aref '(unsigned-byte 32) v 0) ub)
     (sys:typed-aref 'single-float v 0))
+  #+mezzano
+  (mezzano.extensions:ieee-binary32-to-single-float (ub32ref/le vector index))
   #+sbcl
   (sb-kernel:make-single-float (sb32ref/le vector index))
-  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
   (make-single-float (ub32ref/le vector index))
 )
 
@@ -204,11 +212,15 @@
     (setf (sys:typed-aref 'single-float v 0) value)
     (setf (ub32ref/le vector index) (sys:typed-aref '(unsigned-byte 32) v 0))
     value)
+  #+mezzano
+  (progn
+    (setf (ub32ref/le vector index) (mezzano.extensions:single-float-to-ieee-binary32 value))
+    value)
   #+sbcl
   (progn
     (setf (sb32ref/le vector index) (sb-kernel:single-float-bits value))
     value)
-  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
   (progn
     (setf (ub32ref/le vector index) (single-float-bits value))
     value))
@@ -260,11 +272,15 @@
       (setf (sys:typed-aref '(unsigned-byte 32) v 0) upper)
       (setf (sys:typed-aref '(unsigned-byte 32) v 4) lower))
     (sys:typed-aref 'double-float v 0))
+  #+mezzano
+  (let ((upper (ub32ref/be vector index))
+        (lower (ub32ref/be vector (+ index 4))))
+    (mezzano.extensions:ieee-binary64-to-double-float (logior (ash upper 32) lower)))
   #+sbcl
   (let ((upper (sb32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
     (sb-kernel:make-double-float upper lower))
-  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
   (let ((upper (ub32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
     (make-double-float upper lower)))
@@ -323,12 +339,17 @@
       (setf (ub32ref/be vector index) (sys:typed-aref '(unsigned-byte 32) v 0)
             (ub32ref/be vector (+ index 4)) (sys:typed-aref '(unsigned-byte 32) v 4)))
     value)
+  #+mezzano
+  (let ((bits (mezzano.extensions:double-float-to-ieee-binary64 value)))
+    (setf (ub32ref/be vector index) (ldb (byte 32 32) bits)
+          (ub32ref/be vector (+ index 4)) (ldb (byte 32 0) bits))
+    value)
   #+sbcl
   (progn
     (setf (sb32ref/be vector index) (sb-kernel:double-float-high-bits value)
           (ub32ref/be vector (+ index 4)) (sb-kernel:double-float-low-bits value))
     value)
-  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
   (multiple-value-bind (upper lower) (double-float-bits value)
     (setf (ub32ref/be vector index) upper
           (ub32ref/be vector (+ index 4)) lower)
@@ -381,11 +402,15 @@
       (setf (sys:typed-aref '(unsigned-byte 32) v 0) upper)
       (setf (sys:typed-aref '(unsigned-byte 32) v 4) lower))
     (sys:typed-aref 'double-float v 0))
+  #+mezzano
+  (let ((lower (ub32ref/le vector index))
+        (upper (ub32ref/le vector (+ index 4))))
+    (mezzano.extensions:ieee-binary64-to-double-float (logior (ash upper 32) lower)))
   #+sbcl
   (let ((lower (ub32ref/le vector index))
         (upper (sb32ref/le vector (+ index 4))))
     (sb-kernel:make-double-float upper lower))
-  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
   (let ((lower (ub32ref/le vector index))
         (upper (ub32ref/le vector (+ index 4))))
     (make-double-float upper lower)))
@@ -414,6 +439,11 @@
     (setf (ub32ref/le vector index) (ldb (byte 32 0) bits)
           (ub32ref/le vector (+ index 4)) (ldb (byte 32 32) bits))
     value)
+  #+cmu
+  (progn
+    (setf (ub32ref/le vector index) (kernel:double-float-low-bits value)
+          (sb32ref/le vector (+ index 4)) (kernel:double-float-high-bits value))
+    value)
   #+ecl
   ;; TODO: Remove version check when ECL version 23.9.9 or later is generally available.
   (if (>= ext:+ecl-version-number+ 230909)
@@ -425,11 +455,6 @@
         (setf (ub32ref/le vector index) lower
               (ub32ref/le vector (+ index 4)) upper)
         value))
-  #+cmu
-  (progn
-    (setf (ub32ref/le vector index) (kernel:double-float-low-bits value)
-          (sb32ref/le vector (+ index 4)) (kernel:double-float-high-bits value))
-    value)
   #+lispworks
   (let* ((v (sys:make-typed-aref-vector 8)))
     (declare (optimize (speed 3) (float 0) (safety 0)))
@@ -444,12 +469,17 @@
       (setf (ub32ref/le vector index) (sys:typed-aref '(unsigned-byte 32) v 4)
             (ub32ref/le vector (+ index 4)) (sys:typed-aref '(unsigned-byte 32) v 0)))
     value)
+  #+mezzano
+  (let ((bits (mezzano.extensions:double-float-to-ieee-binary64 value)))
+    (setf (ub32ref/le vector index) (ldb (byte 32 0) bits)
+          (ub32ref/le vector (+ index 4)) (ldb (byte 32 32) bits))
+    value)
   #+sbcl
   (progn
     (setf (ub32ref/le vector index) (sb-kernel:double-float-low-bits value)
           (sb32ref/le vector (+ index 4)) (sb-kernel:double-float-high-bits value))
     value)
-  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
   (multiple-value-bind (upper lower) (double-float-bits value)
     (setf (ub32ref/le vector index) lower
           (ub32ref/le vector (+ index 4)) upper)
