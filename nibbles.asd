@@ -31,7 +31,7 @@
                (:static-file "NEWS")
                (:file "package")
                ;; TODO: Add ecl when ECL version 23.9.9 or later is generally available.
-               #-(or abcl allegro ccl cmu lispworks sbcl)
+               #-(or abcl allegro ccl clasp cmu lispworks sbcl)
                (:file "float" :depends-on ("package"))
                (:file "types" :depends-on ("package"))
                (:file "macro-utils" :depends-on ("package"))

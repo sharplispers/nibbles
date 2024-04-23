@@ -65,6 +65,8 @@
     (excl:shorts-to-single-float high low))
   #+ccl
   (ccl::host-single-float-from-unsigned-byte-32 (ub32ref/be vector index))
+  #+clasp
+  (ext:bits-to-single-float (ub32ref/be vector index))
   #+cmu
   (kernel:make-single-float (sb32ref/be vector index))
   #+ecl
@@ -81,7 +83,7 @@
     (sys:typed-aref 'single-float v 0))
   #+sbcl
   (sb-kernel:make-single-float (sb32ref/be vector index))
-  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
   (make-single-float (ub32ref/be vector index)))
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-single-sef/be))
@@ -98,6 +100,10 @@
   #+ccl
   (progn
     (setf (ub32ref/be vector index) (ccl::single-float-bits value))
+    value)
+  #+clasp
+  (progn
+    (setf (ub32ref/be vector index) (ext:single-float-to-bits value))
     value)
   #+cmu
   (progn
@@ -122,7 +128,7 @@
   (progn
     (setf (sb32ref/be vector index) (sb-kernel:single-float-bits value))
     value)
-  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
   (progn
     (setf (ub32ref/be vector index) (single-float-bits value))
     value))
@@ -140,6 +146,8 @@
   (ccl::host-single-float-from-unsigned-byte-32 (ub32ref/le vector index))
   #+cmu
   (kernel:make-single-float (sb32ref/le vector index))
+  #+clasp
+  (ext:bits-to-single-float (ub32ref/le vector index))
   #+ecl
   ;; TODO: Remove version check when ECL version 23.9.9 or later is generally available.
   (if (>= ext:+ecl-version-number+ 230909)
@@ -154,7 +162,7 @@
     (sys:typed-aref 'single-float v 0))
   #+sbcl
   (sb-kernel:make-single-float (sb32ref/le vector index))
-  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
   (make-single-float (ub32ref/le vector index))
 )
 
@@ -172,6 +180,10 @@
   #+ccl
   (progn
     (setf (ub32ref/le vector index) (ccl::single-float-bits value))
+    value)
+  #+clasp
+  (progn
+    (setf (ub32ref/le vector index) (ext:single-float-to-bits value))
     value)
   #+cmu
   (progn
@@ -196,7 +208,7 @@
   (progn
     (setf (sb32ref/le vector index) (sb-kernel:single-float-bits value))
     value)
-  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
   (progn
     (setf (ub32ref/le vector index) (single-float-bits value))
     value))
@@ -218,6 +230,10 @@
   (let ((upper (ub32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
     (ccl::double-float-from-bits upper lower))
+  #+clasp
+  (let ((upper (ub32ref/be vector index))
+        (lower (ub32ref/be vector (+ index 4))))
+    (ext:bits-to-double-float (logior (ash upper 32) lower)))
   #+cmu
   (let ((upper (sb32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
@@ -248,7 +264,7 @@
   (let ((upper (sb32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
     (sb-kernel:make-double-float upper lower))
-  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
   (let ((upper (ub32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
     (make-double-float upper lower)))
@@ -271,6 +287,11 @@
   (multiple-value-bind (upper lower) (ccl::double-float-bits value)
     (setf (ub32ref/be vector index) upper
           (ub32ref/be vector (+ index 4)) lower)
+    value)
+  #+clasp
+  (let ((bits (ext:double-float-to-bits value)))
+    (setf (ub32ref/be vector index) (ldb (byte 32 32) bits)
+          (ub32ref/be vector (+ index 4)) (ldb (byte 32 0) bits))
     value)
   #+cmu
   (progn
@@ -307,7 +328,7 @@
     (setf (sb32ref/be vector index) (sb-kernel:double-float-high-bits value)
           (ub32ref/be vector (+ index 4)) (sb-kernel:double-float-low-bits value))
     value)
-  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
   (multiple-value-bind (upper lower) (double-float-bits value)
     (setf (ub32ref/be vector index) upper
           (ub32ref/be vector (+ index 4)) lower)
@@ -330,6 +351,10 @@
   (let ((lower (ub32ref/le vector index))
         (upper (ub32ref/le vector (+ index 4))))
     (ccl::double-float-from-bits upper lower))
+  #+clasp
+  (let ((lower (ub32ref/le vector index))
+        (upper (ub32ref/le vector (+ index 4))))
+    (ext:bits-to-double-float (logior (ash upper 32) lower)))
   #+cmu
   (let ((lower (ub32ref/le vector index))
         (upper (sb32ref/le vector (+ index 4))))
@@ -360,7 +385,7 @@
   (let ((lower (ub32ref/le vector index))
         (upper (sb32ref/le vector (+ index 4))))
     (sb-kernel:make-double-float upper lower))
-  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
   (let ((lower (ub32ref/le vector index))
         (upper (ub32ref/le vector (+ index 4))))
     (make-double-float upper lower)))
@@ -383,6 +408,11 @@
   (multiple-value-bind (upper lower) (ccl::double-float-bits value)
     (setf (ub32ref/le vector index) lower
           (ub32ref/le vector (+ index 4)) upper)
+    value)
+  #+clasp
+  (let ((bits (ext:double-float-to-bits value)))
+    (setf (ub32ref/le vector index) (ldb (byte 32 0) bits)
+          (ub32ref/le vector (+ index 4)) (ldb (byte 32 32) bits))
     value)
   #+ecl
   ;; TODO: Remove version check when ECL version 23.9.9 or later is generally available.
@@ -419,7 +449,7 @@
     (setf (ub32ref/le vector index) (sb-kernel:double-float-low-bits value)
           (sb32ref/le vector (+ index 4)) (sb-kernel:double-float-high-bits value))
     value)
-  #-(or abcl allegro ccl cmu ecl lispworks sbcl)
+  #-(or abcl allegro ccl clasp cmu ecl lispworks sbcl)
   (multiple-value-bind (upper lower) (double-float-bits value)
     (setf (ub32ref/le vector index) lower
           (ub32ref/le vector (+ index 4)) upper)
