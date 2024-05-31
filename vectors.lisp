@@ -52,6 +52,7 @@
                      collect `(define-storer ,bitsize ,signedp ,big-endian-p) into forms
                      finally (return `(progn ,@forms)))))
   (define-fetchers-and-storers 16)
+  (define-fetchers-and-storers 24)
   (define-fetchers-and-storers 32)
   (define-fetchers-and-storers 64))
 
