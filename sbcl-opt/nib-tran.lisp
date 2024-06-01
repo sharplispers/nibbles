@@ -5,7 +5,7 @@
 (sb-c:deftransform %check-bound ((vector bound offset n-bytes)
 				 ((simple-array (unsigned-byte 8) (*)) index
 				  (and fixnum sb-vm:word)
-				  (member 2 4 8 16))
+				  (member 2 3 4 8 16))
 				 * :node node)
   "optimize away bounds check"
   ;; cf. sb-c::%check-bound transform
@@ -39,11 +39,12 @@
 		 ,',(if setterp
 			(set-form 'vector 'offset 'value n-bytes big-endian-p)
 			(ref-form 'vector 'offset n-bytes signedp big-endian-p)))))))
-    (loop for i from 0 to #-x86-64 #b0111 #+x86-64 #b1011
+    (loop for i from 0 to #-x86-64 #b1011 #+x86-64 #b1111
           for bitsize = (ecase (ldb (byte 2 2) i)
                           (0 16)
-                          (1 32)
-                          (2 64))
+                          (1 24)
+                          (2 32)
+                          (3 64))
           for signedp = (logbitp 1 i)
           for setterp = (logbitp 0 i)
           for byte-fun = (if setterp

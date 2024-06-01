@@ -180,7 +180,7 @@
                           (inst rol :word result 8)
                           (inst ,mov-insn '(:word :qword) result result)
                           (inst shl result 8)
-                          (inst mov result high-memref)))
+                          (inst mov :byte result high-memref)))
                        ((and setterp (not big-endian-p))
                         '((inst mov temp value)
                           (inst mov :word low-memref value)
@@ -190,7 +190,7 @@
                        ((and setterp big-endian-p)
                         '((inst mov temp value)
                           ;; TEMP has the bytes 0 High Mid Low
-                          (inst bswap temp)
+                          (inst bswap :dword temp)
                           ;; L M H 0
                           (inst shr temp 8)
                           ;; 0 L M H
