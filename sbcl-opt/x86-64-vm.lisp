@@ -9,7 +9,7 @@
          (bound :scs (any-reg))
          (index :scs (any-reg)))
   (:arg-types simple-array-unsigned-byte-8 positive-fixnum tagged-num
-              (:constant (member 2 4 8 16)))
+              (:constant (member 2 3 4 8 16)))
   (:info offset)
   (:temporary (:sc any-reg) temp)
   (:results (result :scs (any-reg)))
@@ -129,4 +129,79 @@
           for signedp = (logbitp 1 i)
           for big-endian-p = (logbitp 0 i)
           collect (frob bitsize setterp signedp big-endian-p) into forms
+          finally (return `(progn ,@forms))))
+
+;;; 24-bit accessors need to be handled specially.
+#.(flet ((frob (setterp signedp big-endian-p)
+           (let* ((name (funcall (if setterp
+                                     #'nibbles::byte-set-fun-name
+                                     #'nibbles::byte-ref-fun-name)
+                                 24 signedp big-endian-p))
+                  (internal-name (nibbles::internalify name))
+                  (result-sc (if signedp 'signed-reg 'unsigned-reg))
+                  (result-type (if signedp 'signed-num 'unsigned-num))
+                  (mov-insn (if signedp 'movsx 'movzx)))
+             `(define-vop (,name)
+                (:translate ,internal-name)
+                (:policy :fast-safe)
+                (:args (vector :scs (descriptor-reg))
+                       (index :scs (immediate unsigned-reg))
+                       ,@(when setterp `((value :scs (,result-sc) :target result))))
+                (:arg-types simple-array-unsigned-byte-8 positive-fixnum
+                            ,@(when setterp `(,result-type)))
+                ,@(when setterp
+                    `((:temporary (:sc unsigned-reg
+                                   :from (:load 0)
+                                   :to (:result 0)) temp)))
+                (:results (result :scs (,result-sc) :from (:load 0)))
+                (:result-types ,result-type)
+                (:generator 3
+                 (let* ((base-disp (- (* vector-data-offset n-word-bytes)
+                                      other-pointer-lowtag))
+                        (low-memref
+                          (sc-case index
+                            (immediate
+                             (ea (+ (tn-value index) base-disp) vector))
+                            (t
+                             (ea base-disp vector index))))
+                        (high-memref
+                          (sc-case index
+                            (immediate
+                             (ea (+ (tn-value index) base-disp 2) vector))
+                            (t
+                             (ea (+ base-disp 2) vector index)))))
+                   ,@(cond
+                       ((and (not setterp) (not big-endian-p))
+                        `((inst ,mov-insn '(:byte :qword) result high-memref)
+                          (inst shl result 16)
+                          (inst mov :word result low-memref)))
+                       ((and (not setterp) big-endian-p)
+                        `((inst mov result low-memref)
+                          (inst rol :word result 8)
+                          (inst ,mov-insn '(:word :qword) result result)
+                          (inst shl result 8)
+                          (inst mov :byte result high-memref)))
+                       ((and setterp (not big-endian-p))
+                        '((inst mov temp value)
+                          (inst mov :word low-memref value)
+                          (inst shr temp 16)
+                          (inst mov :byte high-memref temp)
+                          (move result value)))
+                       ((and setterp big-endian-p)
+                        '((inst mov temp value)
+                          ;; TEMP has the bytes 0 High Mid Low
+                          (inst bswap :dword temp)
+                          ;; L M H 0
+                          (inst shr temp 8)
+                          ;; 0 L M H
+                          (inst mov :word low-memref temp)
+                          (inst shr temp 16)
+                          ;; 0 0 0 L
+                          (inst mov :byte high-memref temp)
+                          (move result value))))))))))
+    (loop for i from 0 upto #b111
+          for setterp = (logbitp 2 i)
+          for signedp = (logbitp 1 i)
+          for big-endian-p = (logbitp 0 i)
+          collect (frob setterp signedp big-endian-p) into forms
           finally (return `(progn ,@forms))))

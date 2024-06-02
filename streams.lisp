@@ -83,9 +83,10 @@
      (let ((end (or end (length seq))))
        (read-into-vector* stream seq start end n-bytes reffer)))))
 
-#.(loop for i from 0 upto #b10111
+#.(loop for i from 0 upto #b11111
         for bitsize = (ecase (ldb (byte 2 3) i)
                         (0 16)
+                        (3 24)
                         (1 32)
                         (2 64))
         for readp = (logbitp 2 i)
