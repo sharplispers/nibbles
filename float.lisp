@@ -28,7 +28,7 @@
       (decode-float float)
     (let ((sign-bit (if (plusp sign) 0 1))
           (exponent-bits (if (zerop significand) 0 (+ exponent 127 -1)))
-          (significand-bits (floor (* #.(expt 2s0 24) significand))))
+          (significand-bits (floor (* #.(expt 2f0 24) significand))))
       (when (<= exponent-bits 0)
         (setf significand-bits (ash significand-bits (1- exponent-bits)))
         (setf exponent-bits 0))
