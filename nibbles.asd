@@ -20,7 +20,7 @@
   (call-next-method))
 
 (asdf:defsystem "nibbles"
-  :version "0.15"
+  :version "0.16"
   :author "Nathan Froyd <froydnj@gmail.com>"
   :maintainer "Sharp Lispers <sharplispers@googlegroups.com>"
   :description "A library for accessing octet-addressed blocks of data in big- and little-endian orders"
