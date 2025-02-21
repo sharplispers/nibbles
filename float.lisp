@@ -3,23 +3,32 @@
 (cl:in-package :nibbles)
 
 (defun make-single-float (bits)
-  (let ((exponent-bits (ldb (byte 8 23) bits)))
+  (let ((exponent-bits (ldb (byte 8 23) bits))
+        (significand-bits (ldb (byte 23 0) bits)))
     (when (= exponent-bits 255)
-      (error "infinities and NaNs are not supported"))
+      (error (if (zerop significand-bits)
+                 "floating point infinities are not supported"
+                 "floating point NaNs are not supported")))
+    #+clisp
+    (when (and (zerop exponent-bits) (plusp significand-bits))
+      (error "subnormal floating point numbers are not supported"))
     (let ((sign (if (zerop (ldb (byte 1 31) bits)) 1f0 -1f0))
-          (significand (logior (ldb (byte 23 0) bits) (if (zerop exponent-bits) 0 (ash 1 23))))
+          (significand (logior significand-bits (if (zerop exponent-bits) 0 (ash 1 23))))
           (exponent (if (zerop exponent-bits) -126 (- exponent-bits 127))))
       (* sign (scale-float (float significand 1f0) (- exponent 23))))))
 
 (defun make-double-float (high low)
-  (let ((exponent-bits (ldb (byte 11 20) high)))
+  (let ((exponent-bits (ldb (byte 11 20) high))
+        (significand-bits (logior low (ash (ldb (byte 20 0) high) 32))))
     (when (= exponent-bits 2047)
-      (error "infinities and NaNs are not supported"))
+      (error (if (zerop significand-bits)
+                 "floating point infinities are not supported"
+                 "floating point NaNs are not supported")))
+    #+clisp
+    (when (and (zerop exponent-bits) (plusp significand-bits))
+      (error "subnormal floating point numbers are not supported"))
     (let ((sign (if (zerop (ldb (byte 1 31) high)) 1d0 -1d0))
-          (significand
-            (logior low
-                    (ash (ldb (byte 20 0) high) 32)
-                    (if (zerop exponent-bits) 0 (ash 1 52))))
+          (significand (logior significand-bits (if (zerop exponent-bits) 0 (ash 1 52))))
           (exponent (if (zerop exponent-bits) -1022 (- exponent-bits 1023))))
       (* sign (scale-float (float significand 1d0) (- exponent 52))))))
 
