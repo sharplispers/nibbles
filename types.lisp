@@ -15,10 +15,7 @@
 (deftype octet-vector (&optional (length '*))
   `(array octet (,length)))
 
-(declaim (ftype (function (index
-                           &key
-                           (:initial-element octet))
-                          octet-vector)
+(declaim (ftype (function (index &key (:initial-element octet)) (values octet-vector &optional))
                 make-octet-vector)
          (inline make-octet-vector))
 
@@ -33,7 +30,8 @@ of INITIAL-ELEMENT has to of type `octet'. "
               :element-type    'octet
               :initial-element initial-element))
 
-(declaim (ftype (function (&rest octet) octet-vector) octet-vector)
+(declaim (ftype (function (&rest octet) (values octet-vector &optional))
+                octet-vector)
          (inline octet-vector))
 
 (defun octet-vector (&rest args)
