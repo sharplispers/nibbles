@@ -31,6 +31,7 @@
                (:static-file "NEWS")
                (:file "package")
                ;; TODO: Add ecl when ECL version 23.9.9 or later is generally available.
+               ;; If you change this expression, change the one in the test system definition.
                #-(or abcl allegro ccl clasp cmu lispworks mezzano sbcl)
                (:file "float" :depends-on ("package"))
                (:file "types" :depends-on ("package"))
@@ -59,7 +60,9 @@
   :version "0.1"
   :author "Nathan Froyd <froydnj@gmail.com>"
   :maintainer "Sharp Lispers <sharplispers@googlegroups.com>"
-  :components ((:file "float")
+  :components (;; If you change this expression, change the one in the nibbles system definition.
+               #+(or abcl allegro ccl clasp cmu lispworks mezzano sbcl)
+               (:file "float")
                (:file "tests"))
   :perform (asdf:test-op (operation component)
              (or (uiop:symbol-call '#:rtest '#:do-tests)
