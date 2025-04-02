@@ -68,6 +68,10 @@
   (ccl::host-single-float-from-unsigned-byte-32 (ub32ref/be vector index))
   #+clasp
   (ext:bits-to-single-float (ub32ref/be vector index))
+  #+clisp
+  (ffi:with-foreign-object (u '(ffi:c-union (value ffi:single-float) (bits ffi:uint32)))
+    (setf (ffi:slot (ffi:foreign-value u) 'bits) (ub32ref/be vector index))
+    (ffi:slot (ffi:foreign-value u) 'value))
   #+cmu
   (kernel:make-single-float (sb32ref/be vector index))
   #+ecl
@@ -86,7 +90,7 @@
   (mezzano.extensions:ieee-binary32-to-single-float (ub32ref/be vector index))
   #+sbcl
   (sb-kernel:make-single-float (sb32ref/be vector index))
-  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
+  #-(or abcl allegro ccl clasp clisp cmu ecl lispworks mezzano sbcl)
   (make-single-float (ub32ref/be vector index)))
 
 #+sbcl (declaim (sb-ext:maybe-inline ieee-single-sef/be))
@@ -107,6 +111,13 @@
   #+clasp
   (progn
     (setf (ub32ref/be vector index) (ext:single-float-to-bits value))
+    value)
+  #+clisp
+  (let ((bits
+          (ffi:with-foreign-object (u '(ffi:c-union (value ffi:single-float) (bits ffi:uint32)))
+            (setf (ffi:slot (ffi:foreign-value u) 'value) value)
+            (ffi:slot (ffi:foreign-value u) 'bits))))
+    (setf (ub32ref/be vector index) bits)
     value)
   #+cmu
   (progn
@@ -135,7 +146,7 @@
   (progn
     (setf (sb32ref/be vector index) (sb-kernel:single-float-bits value))
     value)
-  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
+  #-(or abcl allegro ccl clasp clisp cmu ecl lispworks mezzano sbcl)
   (progn
     (setf (ub32ref/be vector index) (single-float-bits value))
     value))
@@ -153,6 +164,10 @@
   (ccl::host-single-float-from-unsigned-byte-32 (ub32ref/le vector index))
   #+clasp
   (ext:bits-to-single-float (ub32ref/le vector index))
+  #+clisp
+  (ffi:with-foreign-object (u '(ffi:c-union (value ffi:single-float) (bits ffi:uint32)))
+    (setf (ffi:slot (ffi:foreign-value u) 'bits) (ub32ref/le vector index))
+    (ffi:slot (ffi:foreign-value u) 'value))
   #+cmu
   (kernel:make-single-float (sb32ref/le vector index))
   #+ecl
@@ -171,7 +186,7 @@
   (mezzano.extensions:ieee-binary32-to-single-float (ub32ref/le vector index))
   #+sbcl
   (sb-kernel:make-single-float (sb32ref/le vector index))
-  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
+  #-(or abcl allegro ccl clasp clisp cmu ecl lispworks mezzano sbcl)
   (make-single-float (ub32ref/le vector index))
 )
 
@@ -193,6 +208,13 @@
   #+clasp
   (progn
     (setf (ub32ref/le vector index) (ext:single-float-to-bits value))
+    value)
+  #+clisp
+  (let ((bits
+          (ffi:with-foreign-object (u '(ffi:c-union (value ffi:single-float) (bits ffi:uint32)))
+            (setf (ffi:slot (ffi:foreign-value u) 'value) value)
+            (ffi:slot (ffi:foreign-value u) 'bits))))
+    (setf (ub32ref/le vector index) bits)
     value)
   #+cmu
   (progn
@@ -221,7 +243,7 @@
   (progn
     (setf (sb32ref/le vector index) (sb-kernel:single-float-bits value))
     value)
-  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
+  #-(or abcl allegro ccl clasp clisp cmu ecl lispworks mezzano sbcl)
   (progn
     (setf (ub32ref/le vector index) (single-float-bits value))
     value))
@@ -247,6 +269,12 @@
   (let ((upper (ub32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
     (ext:bits-to-double-float (logior (ash upper 32) lower)))
+  #+clisp
+  (let ((upper (ub32ref/be vector index))
+        (lower (ub32ref/be vector (+ index 4))))
+    (ffi:with-foreign-object (u '(ffi:c-union (value ffi:double-float) (bits ffi:uint64)))
+      (setf (ffi:slot (ffi:foreign-value u) 'bits) (logior (ash upper 32) lower))
+      (ffi:slot (ffi:foreign-value u) 'value)))
   #+cmu
   (let ((upper (sb32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
@@ -281,7 +309,7 @@
   (let ((upper (sb32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
     (sb-kernel:make-double-float upper lower))
-  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
+  #-(or abcl allegro ccl clasp clisp cmu ecl lispworks mezzano sbcl)
   (let ((upper (ub32ref/be vector index))
         (lower (ub32ref/be vector (+ index 4))))
     (make-double-float upper lower)))
@@ -307,6 +335,14 @@
     value)
   #+clasp
   (let ((bits (ext:double-float-to-bits value)))
+    (setf (ub32ref/be vector index) (ldb (byte 32 32) bits)
+          (ub32ref/be vector (+ index 4)) (ldb (byte 32 0) bits))
+    value)
+  #+clisp
+  (let ((bits
+          (ffi:with-foreign-object (u '(ffi:c-union (value ffi:double-float) (bits ffi:uint64)))
+            (setf (ffi:slot (ffi:foreign-value u) 'value) value)
+            (ffi:slot (ffi:foreign-value u) 'bits))))
     (setf (ub32ref/be vector index) (ldb (byte 32 32) bits)
           (ub32ref/be vector (+ index 4)) (ldb (byte 32 0) bits))
     value)
@@ -350,7 +386,7 @@
     (setf (sb32ref/be vector index) (sb-kernel:double-float-high-bits value)
           (ub32ref/be vector (+ index 4)) (sb-kernel:double-float-low-bits value))
     value)
-  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
+  #-(or abcl allegro ccl clasp clisp cmu ecl lispworks mezzano sbcl)
   (multiple-value-bind (upper lower) (double-float-bits value)
     (setf (ub32ref/be vector index) upper
           (ub32ref/be vector (+ index 4)) lower)
@@ -377,6 +413,12 @@
   (let ((lower (ub32ref/le vector index))
         (upper (ub32ref/le vector (+ index 4))))
     (ext:bits-to-double-float (logior (ash upper 32) lower)))
+  #+clisp
+  (let ((lower (ub32ref/le vector index))
+        (upper (ub32ref/le vector (+ index 4))))
+    (ffi:with-foreign-object (u '(ffi:c-union (value ffi:double-float) (bits ffi:uint64)))
+      (setf (ffi:slot (ffi:foreign-value u) 'bits) (logior (ash upper 32) lower))
+      (ffi:slot (ffi:foreign-value u) 'value)))
   #+cmu
   (let ((lower (ub32ref/le vector index))
         (upper (sb32ref/le vector (+ index 4))))
@@ -411,7 +453,7 @@
   (let ((lower (ub32ref/le vector index))
         (upper (sb32ref/le vector (+ index 4))))
     (sb-kernel:make-double-float upper lower))
-  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
+  #-(or abcl allegro ccl clasp clisp cmu ecl lispworks mezzano sbcl)
   (let ((lower (ub32ref/le vector index))
         (upper (ub32ref/le vector (+ index 4))))
     (make-double-float upper lower)))
@@ -437,6 +479,14 @@
     value)
   #+clasp
   (let ((bits (ext:double-float-to-bits value)))
+    (setf (ub32ref/le vector index) (ldb (byte 32 0) bits)
+          (ub32ref/le vector (+ index 4)) (ldb (byte 32 32) bits))
+    value)
+  #+clisp
+  (let ((bits
+          (ffi:with-foreign-object (u '(ffi:c-union (value ffi:double-float) (bits ffi:uint64)))
+            (setf (ffi:slot (ffi:foreign-value u) 'value) value)
+            (ffi:slot (ffi:foreign-value u) 'bits))))
     (setf (ub32ref/le vector index) (ldb (byte 32 0) bits)
           (ub32ref/le vector (+ index 4)) (ldb (byte 32 32) bits))
     value)
@@ -480,7 +530,7 @@
     (setf (ub32ref/le vector index) (sb-kernel:double-float-low-bits value)
           (sb32ref/le vector (+ index 4)) (sb-kernel:double-float-high-bits value))
     value)
-  #-(or abcl allegro ccl clasp cmu ecl lispworks mezzano sbcl)
+  #-(or abcl allegro ccl clasp clisp cmu ecl lispworks mezzano sbcl)
   (multiple-value-bind (upper lower) (double-float-bits value)
     (setf (ub32ref/le vector index) lower
           (ub32ref/le vector (+ index 4)) upper)

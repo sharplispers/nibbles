@@ -20,7 +20,7 @@
   (call-next-method))
 
 (asdf:defsystem "nibbles"
-  :version "0.16"
+  :version "0.17"
   :author "Nathan Froyd <froydnj@gmail.com>"
   :maintainer "Sharp Lispers <sharplispers@googlegroups.com>"
   :description "A library for accessing octet-addressed blocks of data in big- and little-endian orders"
@@ -32,7 +32,7 @@
                (:file "package")
                ;; TODO: Add ecl when ECL version 23.9.9 or later is generally available.
                ;; If you change this expression, change the one in the test system definition.
-               #-(or abcl allegro ccl clasp cmu lispworks mezzano sbcl)
+               #-(or abcl allegro ccl clasp clisp cmu lispworks mezzano sbcl)
                (:file "float" :depends-on ("package"))
                (:file "types" :depends-on ("package"))
                (:file "macro-utils" :depends-on ("package"))
@@ -57,11 +57,11 @@
 
 (asdf:defsystem "nibbles/tests"
   :depends-on ("nibbles" "rt")
-  :version "0.1"
+  :version "0.2"
   :author "Nathan Froyd <froydnj@gmail.com>"
   :maintainer "Sharp Lispers <sharplispers@googlegroups.com>"
   :components (;; If you change this expression, change the one in the nibbles system definition.
-               #+(or abcl allegro ccl clasp cmu lispworks mezzano sbcl)
+               #+(or abcl allegro ccl clasp clisp cmu lispworks mezzano sbcl)
                (:file "float")
                (:file "tests"))
   :perform (asdf:test-op (operation component)
