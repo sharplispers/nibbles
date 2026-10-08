@@ -11,7 +11,7 @@
 ;; We DEFKNOWN the exported functions so we can DEFTRANSFORM them.
 ;; We DEFKNOWN the %-functions so we can DEFINE-VOP them.
 
-#.(loop for i from 0 to #-x86-64 #b1011 #+x86-64 #b1111
+#.(loop for i from 0 to #-(or arm64 x86-64) #b1011 #+(or arm64 x86-64) #b1111
         for bitsize = (ecase (ldb (byte 2 2) i)
                         (0 16)
                         (1 24)
