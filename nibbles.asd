@@ -48,7 +48,8 @@
                         :components ((:file "fndb")
                                      (:file "nib-tran" :depends-on ("fndb"))
                                      (:file "x86-vm" :if-feature :x86 :depends-on ("fndb"))
-                                     (:file "x86-64-vm" :if-feature :x86-64 :depends-on ("fndb")))))
+                                     (:file "x86-64-vm" :if-feature :x86-64 :depends-on ("fndb"))
+                                     (:file "arm64-vm" :if-feature :arm64 :depends-on ("fndb")))))
   :in-order-to ((asdf:test-op (asdf:test-op "nibbles/tests")))
   :perform (asdf:prepare-op (component operation)
              ;; nibbles uses SBCL's assembler on x86 and x86-64. The

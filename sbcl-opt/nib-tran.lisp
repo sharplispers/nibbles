@@ -25,11 +25,11 @@
            (declare (ignorable bitsize signedp setterp))
            ;; Bleh.  No good way to solve this atm.
            ;;
-           ;; Non-x86.  No support.
-           #-(or x86 x86-64)
+           ;; Non-x86 or arm64.  No support.
+           #-(or x86 x86-64 arm64)
            nil
-           ;; x86 and x86-64.  Can do everything.
-           #+(or x86 x86-64)
+           ;; x86, x86-64, and arm64.  Can do everything.
+           #+(or x86 x86-64 arm64)
            t)
          (generic-transform-form (fun-name arglist n-bytes
                                            setterp signedp big-endian-p)
@@ -39,7 +39,7 @@
 		 ,',(if setterp
 			(set-form 'vector 'offset 'value n-bytes big-endian-p)
 			(ref-form 'vector 'offset n-bytes signedp big-endian-p)))))))
-    (loop for i from 0 to #-x86-64 #b1011 #+x86-64 #b1111
+    (loop for i from 0 to #-(or arm64 x86-64) #b1011 #+(or arm64 x86-64) #b1111
           for bitsize = (ecase (ldb (byte 2 2) i)
                           (0 16)
                           (1 24)
